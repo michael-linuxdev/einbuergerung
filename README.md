@@ -19,6 +19,12 @@ Kostenlose, offline-fähige Web-App (PWA) für Smartphone und Tablet, die auf di
 - **Wörterbuch zum Antippen:** schwierige Begriffe in den Testfragen mit russischer Erklärung
 - **Mitbring-Listen** für Test, B1-Prüfung, Behördentermin und Urkundenübergabe
 - **Familienmodus:** mehrere Profile, gemeinsame Unterlagenliste
+- **Vorlesen überall:** Seite auf Deutsch oder Russisch vorlesen, dazu Vorlese-Knöpfe an Fragen, Erklärungen und allen russischen Texten
+- **Aussprache üben:** Mikrofon-Knopf bei Beispielsätzen, Dialogen und Musterantworten (Chrome/Edge/Safari mit Spracherkennung)
+- **Gespräch bei der Behörde üben** mit Musterantworten und Erklärung des Bekenntnisses
+- **Mein erstes Mal wählen:** Wahlen in Sachsen erklärt, mit Quiz
+- **Weiterempfehlen** per Teilen-Menü, WhatsApp, Telegram oder QR-Code; Erfolgsbild nach bestandener Simulation
+- **Update-Hinweis:** „Neue Version verfügbar – jetzt laden“
 - **Sicheres Speichern:** automatisch in localStorage und IndexedDB, dauerhafter Speicher angefragt, tägliche Sicherungspunkte (7 Tage), Sicherungsdatei
 - **Voraussetzungs-Check** mit Fristenrechner (5 Jahre bzw. 3 Jahre bei deutschem Ehepartner)
 - **Unterlagen-Checkliste** nach Lebenssituation, druckbar

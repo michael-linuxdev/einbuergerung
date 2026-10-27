@@ -753,5 +753,182 @@
     ]
    ]
   }
- ]
+ ],
+ "gespraech": {
+  "intro": [
+   "Beim Termin prüft die Behörde deine Unterlagen und spricht kurz mit dir – oft auch, um dein Deutsch zu hören. Es ist kein Test zum Durchfallen. Antworte ruhig in einfachen, ganzen Sätzen.",
+   "На приёме ведомство проверяет документы и коротко беседует с вами — часто и для того, чтобы услышать ваш немецкий. Это не экзамен, который можно провалить. Отвечайте спокойно, простыми полными предложениями."
+  ],
+  "fragen": [
+   {
+    "q": "Warum möchten Sie die deutsche Staatsangehörigkeit?",
+    "qru": "Почему вы хотите получить немецкое гражданство?",
+    "a": "Ich lebe seit vielen Jahren in Deutschland. Meine Familie und meine Arbeit sind hier. Ich möchte auch wählen und mitbestimmen können.",
+    "aru": "Я много лет живу в Германии. Здесь моя семья и работа. Я хочу тоже голосовать и участвовать в решениях."
+   },
+   {
+    "q": "Seit wann leben Sie in Deutschland?",
+    "qru": "С какого времени вы живёте в Германии?",
+    "a": "Ich lebe seit 2019 in Deutschland, seit 2021 hier in Freital.",
+    "aru": "Я живу в Германии с 2019 года, с 2021 года — здесь, во Фрайтале."
+   },
+   {
+    "q": "Was arbeiten Sie?",
+    "qru": "Кем вы работаете?",
+    "a": "Ich arbeite als Pflegefachkraft in einem Seniorenheim in Pirna, in Vollzeit.",
+    "aru": "Я работаю медсестрой по уходу в доме престарелых в Пирне, на полную ставку."
+   },
+   {
+    "q": "Wie haben Sie Deutsch gelernt?",
+    "qru": "Как вы учили немецкий?",
+    "a": "Zuerst habe ich einen Integrationskurs besucht. Danach habe ich bei der Arbeit und mit einer App weitergelernt. Im März habe ich die B1-Prüfung bestanden.",
+    "aru": "Сначала я посещал(а) интеграционный курс. Потом учил(а) дальше на работе и с приложением. В марте я сдал(а) экзамен B1."
+   },
+   {
+    "q": "Was bedeutet für Sie Demokratie?",
+    "qru": "Что для вас означает демократия?",
+    "a": "Für mich bedeutet Demokratie, dass das Volk in freien Wahlen entscheidet und dass jeder seine Meinung sagen darf.",
+    "aru": "Для меня демократия — это когда народ решает на свободных выборах и каждый может высказывать своё мнение."
+   },
+   {
+    "q": "Was bedeutet Gleichberechtigung von Mann und Frau?",
+    "qru": "Что означает равноправие мужчин и женщин?",
+    "a": "Männer und Frauen haben die gleichen Rechte – in der Familie, bei der Arbeit und vor dem Gesetz. Zum Beispiel entscheiden beide gleich über Geld und Kinder.",
+    "aru": "Мужчины и женщины имеют равные права — в семье, на работе и перед законом. Например, оба одинаково решают вопросы денег и детей."
+   },
+   {
+    "q": "Warum hat Deutschland eine besondere Verantwortung für jüdisches Leben?",
+    "qru": "Почему Германия несёт особую ответственность за еврейскую жизнь?",
+    "a": "Wegen der Verbrechen der Nationalsozialisten, vor allem des Holocausts. Deshalb muss Deutschland jüdisches Leben besonders schützen, und Antisemitismus hat hier keinen Platz.",
+    "aru": "Из-за преступлений национал-социалистов, прежде всего Холокоста. Поэтому Германия должна особенно защищать еврейскую жизнь, и антисемитизму здесь нет места."
+   },
+   {
+    "q": "Haben Sie Ihre Adresse oder Ihre Arbeit seit dem Antrag geändert?",
+    "qru": "Меняли ли вы адрес или работу после подачи заявления?",
+    "a": "Nein, alles ist gleich geblieben. / Ja, ich habe im Juli die Arbeitsstelle gewechselt. Den neuen Arbeitsvertrag habe ich dabei.",
+    "aru": "Нет, всё осталось как было. / Да, в июле я сменил(а) работу. Новый трудовой договор у меня с собой."
+   },
+   {
+    "q": "Wurden Sie in Deutschland oder im Ausland verurteilt?",
+    "qru": "Были ли вы осуждены в Германии или за границей?",
+    "a": "Nein, ich wurde nie verurteilt.",
+    "aru": "Нет, я никогда не был(а) осуждён(а)."
+   },
+   {
+    "q": "Haben Sie noch Fragen?",
+    "qru": "У вас есть ещё вопросы?",
+    "a": "Ja: Wie lange dauert die Bearbeitung ungefähr, und muss ich noch etwas nachreichen?",
+    "aru": "Да: примерно сколько длится рассмотрение и нужно ли мне ещё что-то донести?"
+   }
+  ],
+  "bekenntnis": [
+   "Vor der Einbürgerung unterschreibst du eine Erklärung. Darin bekennst du dich zur freiheitlichen demokratischen Grundordnung des Grundgesetzes: Menschenwürde, Demokratie, Rechtsstaat, Gleichberechtigung. Du erklärst, dass du keine verfassungsfeindlichen Bestrebungen unterstützt. Seit 2024 gehört auch das Bekenntnis zur besonderen historischen Verantwortung Deutschlands dazu – insbesondere zum Schutz jüdischen Lebens – sowie zum friedlichen Zusammenleben der Völker. Bei der Urkundenübergabe sprichst du ein feierliches Bekenntnis. Lies die Erklärung vorher in Ruhe und frag nach, wenn du etwas nicht verstehst.",
+   "Перед натурализацией вы подписываете заявление. В нём вы признаёте свободный демократический строй Основного закона: достоинство человека, демократию, правовое государство, равноправие. Вы заявляете, что не поддерживаете антиконституционных устремлений. С 2024 года сюда входит и признание особой исторической ответственности Германии — прежде всего защиты еврейской жизни — и мирного сосуществования народов. При вручении свидетельства вы произносите торжественное обязательство. Заранее спокойно прочитайте заявление и спрашивайте, если что-то непонятно."
+  ]
+ },
+ "waehlen": {
+  "intro": [
+   "Mit der Einbürgerung darfst du in Deutschland an allen Wahlen teilnehmen. So funktioniert es in Sachsen.",
+   "После натурализации вы можете участвовать во всех выборах в Германии. Вот как это работает в Саксонии."
+  ],
+  "punkte": [
+   [
+    "Wer darf wählen?",
+    "Deutsche Staatsangehörige ab 18 Jahren – bei Bundestags-, Landtags- und Kommunalwahlen in Sachsen. Bei der Europawahl schon ab 16.",
+    "Кто может голосовать? Граждане Германии с 18 лет — на выборах в бундестаг, ландтаг и муниципальных выборах в Саксонии. На европейских выборах — уже с 16."
+   ],
+   [
+    "Muss ich mich anmelden?",
+    "Nein. Wer beim Einwohnermeldeamt gemeldet ist, steht automatisch im Wählerverzeichnis.",
+    "Нужно ли регистрироваться? Нет. Кто зарегистрирован по месту жительства, автоматически внесён в список избирателей."
+   ],
+   [
+    "Wahlbenachrichtigung",
+    "Einige Wochen vor der Wahl kommt ein Brief der Gemeinde mit Datum, Wahllokal und dem Antrag auf Briefwahl. Kommt kein Brief, frag bei der Gemeinde nach.",
+    "Уведомление о выборах. За несколько недель до выборов приходит письмо от общины с датой, адресом участка и заявлением на голосование по почте. Если письмо не пришло — спросите в общине."
+   ],
+   [
+    "Im Wahllokal",
+    "Wahlbenachrichtigung und Ausweis mitnehmen. In der Kabine ankreuzen, Zettel falten, in die Urne werfen. Die Wahl ist geheim – niemand darf zusehen.",
+    "На участке. Взять уведомление и удостоверение. В кабинке поставить крестики, сложить бюллетень и опустить в урну. Голосование тайное — никто не должен видеть."
+   ],
+   [
+    "Briefwahl",
+    "Mit der Wahlbenachrichtigung oder online bei der Gemeinde beantragen. Die Unterlagen kommen per Post. Den roten Wahlbrief rechtzeitig abschicken – er muss am Wahltag bis 18 Uhr ankommen.",
+    "Голосование по почте. Подать заявление с помощью уведомления или онлайн в общине. Документы придут по почте. Отправить красный конверт заранее — он должен прийти до 18:00 в день выборов."
+   ],
+   [
+    "Bundestagswahl",
+    "Zwei Stimmen: Erststimme für eine Person aus deinem Wahlkreis, Zweitstimme für eine Partei. Die Zweitstimme entscheidet über die Sitze.",
+    "Выборы в бундестаг. Два голоса: первый — за кандидата из вашего округа, второй — за партию. Второй голос определяет распределение мест."
+   ],
+   [
+    "Landtagswahl Sachsen",
+    "Ebenfalls zwei Stimmen: Direktstimme für eine Person, Listenstimme für eine Partei. Gewählt wird alle fünf Jahre.",
+    "Выборы в ландтаг Саксонии. Тоже два голоса: прямой голос за кандидата, списочный — за партию. Выборы каждые пять лет."
+   ],
+   [
+    "Kommunalwahl Sachsen",
+    "Für Gemeinderat bzw. Stadtrat und Kreistag hast du je drei Stimmen. Du darfst sie einer Person geben (kumulieren) oder auf Personen verschiedener Listen verteilen (panaschieren).",
+    "Муниципальные выборы в Саксонии. В совет общины/города и районный совет у вас по три голоса. Их можно отдать одному кандидату (кумулирование) или распределить между кандидатами разных списков (панаширование)."
+   ],
+   [
+    "Wahlhelfer werden",
+    "Viele Gemeinden suchen ehrenamtliche Wahlhelfer und zahlen ein „Erfrischungsgeld“. Eine gute Gelegenheit, Leute kennenzulernen.",
+    "Стать помощником на выборах. Многие общины ищут волонтёров-помощников и платят небольшое вознаграждение. Хорошая возможность познакомиться с людьми."
+   ]
+  ],
+  "quiz": [
+   {
+    "q": "Wie kommst du ins Wählerverzeichnis?",
+    "o": [
+     "Ich muss mich vor jeder Wahl anmelden.",
+     "Automatisch, wenn ich gemeldet bin.",
+     "Über eine Partei.",
+     "Gar nicht – nur mit Antrag beim Bundestag."
+    ],
+    "a": 1
+   },
+   {
+    "q": "Bis wann muss der Briefwahl-Brief ankommen?",
+    "o": [
+     "Am Wahltag bis 18 Uhr",
+     "Eine Woche nach der Wahl",
+     "Am Tag vor der Wahl um 12 Uhr",
+     "Egal, Hauptsache abgeschickt"
+    ],
+    "a": 0
+   },
+   {
+    "q": "Wie viele Stimmen hast du bei der Kommunalwahl in Sachsen für den Gemeinderat?",
+    "o": [
+     "eine",
+     "zwei",
+     "drei",
+     "fünf"
+    ],
+    "a": 2
+   },
+   {
+    "q": "Welche Stimme entscheidet bei der Bundestagswahl über die Sitzverteilung?",
+    "o": [
+     "die Erststimme",
+     "die Zweitstimme",
+     "beide gleich",
+     "keine"
+    ],
+    "a": 1
+   },
+   {
+    "q": "Ab welchem Alter darfst du bei der Europawahl wählen?",
+    "o": [
+     "14",
+     "16",
+     "18",
+     "21"
+    ],
+    "a": 1
+   }
+  ]
+ }
 }

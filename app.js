@@ -1,5 +1,5 @@
 // Einbürgerung Sachsen – Lern-App (PWA). Vanilla JS, keine Abhängigkeiten.
-const VERSION = '1.2.1';
+const VERSION = '1.3.0';
 const $app = document.getElementById('app');
 const DAY = 86400000;
 
@@ -127,12 +127,12 @@ async function boot() {
   applyPrefs();
   window.addEventListener('hashchange', route);
   route();
+  readerBar();
   maybeInstallSheet();
 }
 
 /* ---------- Helfer ---------- */
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const ru = t => t ? `<span class="ru" lang="ru">${esc(t)}</span>` : '';
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const today = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); };
 const fmtDate = t => new Date(t).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -141,7 +141,7 @@ const bar = p => `<div class="progress" role="progressbar" aria-valuenow="${p}" 
 const back = (href, label = 'Zurück') => `<a class="back no-print" href="${href}">‹ ${label}</a>`;
 const ABC = ['A', 'B', 'C', 'D'];
 const EMBED = (() => { try { return window.self !== window.top; } catch { return true; } })(); // in eingebetteter Vorschau kein Drucken/Download
-function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2200); }
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), msg.length > 60 ? 4500 : 2200); }
 function applyPrefs() {
   document.body.classList.toggle('no-ru', !S.ru);
   const r = document.documentElement;
@@ -149,18 +149,86 @@ function applyPrefs() {
   else if (applyPrefs.set) { r.removeAttribute('data-theme'); applyPrefs.set = false; }
   r.dataset.size = S.size;
 }
+
+/* ---------- Sprachausgabe Deutsch + Muttersprache, Spracherkennung ---------- */
+const SAY_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 010 6"/></svg>';
+// kleiner Vorlese-Knopf als <span>, damit er auch in Antwort-Buttons stehen darf
+const say = (text, lang = 'de') => text ? `<span class="say" role="button" tabindex="0" data-say="${lang}" data-t="${esc(text)}" aria-label="${lang === 'ru' ? 'По-русски прочитать' : 'Vorlesen'}">${SAY_ICON}${lang === 'ru' ? '<small>RU</small>' : ''}</span>` : '';
+const ru = t => t ? `<span class="ru" lang="ru">${esc(t)} ${say(t, 'ru')}</span>` : '';
 const speakIcon = '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11"/></svg>';
 function speakBtn(text) { return `<button class="speak" data-act="speak" data-t="${esc(text)}" aria-label="Vorlesen">${speakIcon}</button>`; }
-let deVoice = null;
-function speak(text) {
-  if (!('speechSynthesis' in window)) return toast('Sprachausgabe wird auf diesem Gerät nicht unterstützt.');
-  speechSynthesis.cancel();
-  if (!deVoice) deVoice = speechSynthesis.getVoices().find(v => v.lang && v.lang.startsWith('de'));
-  const u = new SpeechSynthesisUtterance(text.replace(/–.*$/, '').replace(/\s*\/\s*/g, ', '));
-  u.lang = 'de-DE'; u.rate = 0.9; if (deVoice) u.voice = deVoice;
-  speechSynthesis.speak(u);
+const VOICE = {};
+function voiceFor(lang) {
+  if (VOICE[lang] === undefined) { const vs = speechSynthesis.getVoices(); VOICE[lang] = vs.find(v => v.lang && v.lang.toLowerCase().startsWith(lang) && /google|enhanced|premium|siri/i.test(v.name)) || vs.find(v => v.lang && v.lang.toLowerCase().startsWith(lang)) || null; }
+  return VOICE[lang];
 }
-if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => { deVoice = null; };
+// Lange Texte in Sätze teilen (Chrome bricht sehr lange Ausgaben sonst ab)
+function chunks(text) { return String(text).replace(/\s+/g, ' ').match(/[^.!?…]+[.!?…]*\s*/g)?.map(s => s.trim()).filter(Boolean) || []; }
+let sayToken = 0;
+function speak(text, lang = 'de', onDone) {
+  if (!('speechSynthesis' in window)) { toast('Sprachausgabe wird auf diesem Gerät nicht unterstützt.'); return; }
+  speechSynthesis.cancel();
+  const v = voiceFor(lang);
+  if (lang === 'ru' && !v && speechSynthesis.getVoices().length) toast('Keine russische Stimme installiert – in den Geräteeinstellungen unter Sprachausgabe hinzufügen.');
+  const my = ++sayToken, parts = chunks(text.replace(/\s*\/\s*/g, ', '));
+  const next = k => {
+    if (my !== sayToken) return;
+    if (k >= parts.length) { onDone?.(); return; }
+    const u = new SpeechSynthesisUtterance(parts[k]); u.lang = lang === 'ru' ? 'ru-RU' : 'de-DE'; u.rate = lang === 'ru' ? 1 : 0.9; if (v) u.voice = v;
+    u.onend = () => next(k + 1); u.onerror = () => next(k + 1);
+    speechSynthesis.speak(u);
+  };
+  next(0);
+}
+function stopSpeak() { sayToken++; if ('speechSynthesis' in window) speechSynthesis.cancel(); }
+if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => { for (const k in VOICE) delete VOICE[k]; };
+
+const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+const mic = text => Rec ? `<span class="say mic" role="button" tabindex="0" data-mic="${esc(text)}" aria-label="Nachsprechen und prüfen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a3 3 0 013 3v6a3 3 0 01-6 0V6a3 3 0 013-3zM5 11a7 7 0 0014 0M12 18v3"/></svg></span>` : '';
+function listen(target, el) {
+  stopSpeak();
+  const r = new Rec(); r.lang = 'de-DE'; r.interimResults = false; r.maxAlternatives = 3;
+  el.classList.add('on'); toast('Sprich jetzt …');
+  const words = s => s.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean);
+  r.onresult = e => {
+    const alts = [...e.results[0]].map(a => a.transcript);
+    const want = words(target);
+    const best = alts.map(a => { const got = new Set(words(a)); return { a, p: Math.round(want.filter(w => got.has(w)).length / want.length * 100) }; }).sort((x, y) => y.p - x.p)[0];
+    toast(`${best.p >= 80 ? '✓ Sehr gut' : best.p >= 50 ? 'Fast' : 'Nochmal versuchen'} (${best.p} %): „${best.a}“`);
+  };
+  r.onerror = e => toast(e.error === 'not-allowed' ? 'Bitte den Mikrofon-Zugriff erlauben.' : 'Nicht verstanden – bitte nochmal.');
+  r.onend = () => el.classList.remove('on');
+  try { r.start(); } catch { el.classList.remove('on'); }
+}
+// Vorlese- und Mikrofon-Knöpfe überall: abfangen, bevor ein Elternelement (z. B. eine Antwort) reagiert
+document.addEventListener('click', e => {
+  const s = e.target.closest('.say'); if (!s) return;
+  e.preventDefault(); e.stopPropagation();
+  if (s.dataset.mic) listen(s.dataset.mic, s); else speak(s.dataset.t, s.dataset.say);
+}, true);
+document.addEventListener('keydown', e => { const s = e.target.closest?.('.say'); if (s && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); s.click(); } });
+
+// Ganze Seite vorlesen (Deutsch oder Russisch)
+function pageText(lang) {
+  const root = $app.cloneNode(true);
+  root.querySelectorAll('.say, .speak, button.btn, .nav, script, style, .no-read, input, select, textarea').forEach(n => n.remove());
+  if (lang === 'ru') return [...root.querySelectorAll('.ru')].map(n => n.textContent.trim()).filter(Boolean).join('. ');
+  root.querySelectorAll('.ru').forEach(n => n.remove());
+  return root.textContent.replace(/\s+/g, ' ').replace(/[›‹]/g, '').trim();
+}
+function readerBar() {
+  if (document.getElementById('reader')) return;
+  const el = document.createElement('div'); el.id = 'reader'; el.className = 'reader no-print';
+  el.innerHTML = `<span class="ico" aria-hidden="true">${SAY_ICON}</span><button data-read="de" aria-label="Seite auf Deutsch vorlesen">DE</button><button data-read="ru" aria-label="Страницу по-русски">RU</button><button data-read="stop" aria-label="Stopp" hidden>■</button>`;
+  el.onclick = e => {
+    const b = e.target.closest('[data-read]'); if (!b) return;
+    const stop = el.querySelector('[data-read="stop"]');
+    if (b.dataset.read === 'stop') { stopSpeak(); stop.hidden = true; return; }
+    const t = pageText(b.dataset.read); if (!t) return toast(b.dataset.read === 'ru' ? 'Auf dieser Seite gibt es keinen russischen Text.' : 'Kein Text gefunden.');
+    stop.hidden = false; speak(t, b.dataset.read, () => { stop.hidden = true; });
+  };
+  document.body.appendChild(el);
+}
 
 /* ---------- Spaced Repetition (Leitner) ---------- */
 const INTERVAL = [0, 1, 2, 4, 7, 14]; // Tage je Stufe
@@ -180,11 +248,11 @@ function route() {
   const parts = (decodeURIComponent(location.hash).replace(/^#\/?/, '') || 'start').split(/--|\//);
   const [p, a, b] = parts;
   const parent = { lernen: 'test', pruefung: 'test', katalog: 'test', audio: 'test', glossar: 'test', lektion: 'kurs', vokabeln: 'kurs', dtz: 'kurs' }[p];
-  const extra = ['check', 'plan', 'lebenslauf', 'kosten', 'fristen', 'termine', 'briefe', 'installieren', 'profil', 'einstellungen'].includes(p);
+  const extra = ['check', 'plan', 'lebenslauf', 'kosten', 'fristen', 'termine', 'briefe', 'installieren', 'profil', 'einstellungen', 'gespraech', 'waehlen', 'teilen'].includes(p);
   document.querySelectorAll('[data-nav]').forEach(n => n.classList.toggle('active', n.dataset.nav === p || n.dataset.nav === parent || (extra && n.dataset.nav === 'mehr' && innerWidth < 900)));
-  const views = { start, test, lernen, pruefung, katalog, kurs, lektion, vokabeln, dtz, docs, amt, check, briefe, einstellungen, mehr, plan, lebenslauf, kosten, fristen, installieren, audio, termine, glossar, profil };
+  const views = { start, test, lernen, pruefung, katalog, kurs, lektion, vokabeln, dtz, docs, amt, check, briefe, einstellungen, mehr, plan, lebenslauf, kosten, fristen, installieren, audio, termine, glossar, profil, gespraech, waehlen, teilen };
   (views[p] || start)(a, b);
-  closePop();
+  closePop(); stopSpeak(); document.querySelector('#reader [data-read="stop"]')?.setAttribute('hidden', '');
   window.scrollTo(0, 0);
   $app.focus({ preventScroll: true });
 }
@@ -216,6 +284,9 @@ function mehr() {
        ['audio', 'Audio-Modus', 'Аудиорежим', 'Fragen vorlesen lassen – für unterwegs'],
        ['glossar', 'Wörterbuch', 'Словарь', 'Schwierige Begriffe auf Russisch erklärt'],
        ['profil', 'Familienmodus', 'Семейный режим', 'Mehrere Personen auf einem Gerät'],
+       ['gespraech', 'Gespräch bei der Behörde üben', 'Подготовка к беседе в ведомстве', 'Typische Fragen, Musterantworten, das Bekenntnis erklärt'],
+       ['waehlen', 'Mein erstes Mal wählen', 'Мои первые выборы', 'Wahlen in Sachsen einfach erklärt – mit Quiz'],
+       ['teilen', 'App weiterempfehlen', 'Порекомендовать приложение', 'Per WhatsApp, Telegram oder QR-Code'],
        ['briefe', 'Briefvorlagen', 'Шаблоны писем', 'An die Behörde schreiben – zum Kopieren'],
        ['installieren', 'Als App installieren', 'Установить как приложение', 'Anleitung für iPhone, iPad und Android'],
        ['einstellungen', 'Einstellungen & Infos', 'Настройки и информация', 'Russisch, Schriftgröße, Sicherung, Quellen']]
@@ -254,7 +325,7 @@ function qCard(q, { idx, total, sel = null, reveal = false, mode = '' } = {}) {
   return `
     <div class="card">
       <div class="q-head"><span>${q.id.startsWith('SN') ? 'Sachsen' : 'Frage'} ${q.n}${q.t && q.t !== 'Sachsen' ? ' · ' + esc(q.t) : ''}</span>${idx != null ? `<span>${idx + 1} / ${total}</span>` : ''}</div>
-      <div class="q-text">${gloss(esc(q.q))}${ru(q.ru)}</div>
+      <div class="q-text">${gloss(esc(q.q))} ${say(q.q + ' … ' + q.o.map((o, i) => ABC[i] + ': ' + o).join('. '))}${q.ru ? `<span class="ru" lang="ru">${esc(q.ru)} ${say(q.ru + ' … ' + (q.ruo || []).map((o, i) => ABC[i] + ': ' + o).join('. '), 'ru')}</span>` : ''}</div>
       ${q.img ? `<img class="q-img" src="${q.img}" alt="Abbildung zu Frage ${esc(q.n)}" loading="lazy">` : ''}
       <div class="opts">${q.o.map((o, i) => {
         let cls = '';
@@ -262,7 +333,7 @@ function qCard(q, { idx, total, sel = null, reveal = false, mode = '' } = {}) {
         else if (i === sel) cls = 'sel';
         return `<button class="opt ${cls}" data-act="${mode}" data-i="${i}" ${reveal && mode !== 'exam' ? 'disabled' : ''}><span class="k">${ABC[i]}</span><span>${gloss(esc(o))}${ruOpts[i] && ruOpts[i] !== o ? ru(ruOpts[i]) : ''}</span></button>`;
       }).join('')}</div>
-      ${reveal && q.e ? `<div class="why"><b>WARUM?</b>${esc(q.e[0])}${ru(q.e[1])}</div>` : ''}
+      ${reveal && q.e ? `<div class="why"><b>WARUM?</b>${esc(q.e[0])} ${say(q.e[0])}${ru(q.e[1])}</div>` : ''}
     </div>`;
 }
 
@@ -345,14 +416,14 @@ function pruefung() {
       <div class="card" style="text-align:center"><div class="stat" style="font-size:3em">${score}/33</div>
         <p><span class="badge ${ok ? 'ok' : 'bad'}" style="font-size:1em">${ok ? 'Bestanden' : 'Nicht bestanden'}</span></p>
         <p class="muted">${ok ? (score >= 25 ? 'Sehr sicher – so kannst du dich anmelden.' : 'Bestanden, aber übe weiter, bis du sicher über 25 liegst.') : 'Mindestens 17 richtige Antworten sind nötig. Übe deine Fehler!'}</p>
-        <div class="row" style="justify-content:center"><a class="btn primary" href="#lernen--fehler">Fehler üben</a><button class="btn" data-act="again">Neue Simulation</button></div></div>
+        <div class="row" style="justify-content:center"><a class="btn primary" href="#lernen--fehler">Fehler üben</a><button class="btn" data-act="again">Neue Simulation</button>${ok ? '<button class="btn" data-act="bild">Erfolg teilen</button>' : ''}</div><div id="erfolg" style="margin-top:12px"></div></div>
       <h2>Auswertung</h2>
       ${qs.map((q, k) => `<details class="card flat"><summary><b>${k + 1}.</b> ${ans[k] === q.a ? '<span class="badge ok">richtig</span>' : '<span class="badge bad">' + (ans[k] === null ? 'leer' : 'falsch') + '</span>'} ${esc(q.q)}</summary><div style="margin-top:10px">${qCard(q, { sel: ans[k], reveal: true, mode: 'x' })}</div></details>`).join('')}`);
   }
   $app.onclick = e => {
     const t = e.target.closest('[data-act]'); if (!t) return;
     const a = t.dataset.act;
-    if (done) { if (a === 'again') pruefung(); return; }
+    if (done) { if (a === 'again') pruefung(); if (a === 'bild') erfolgsbild(qs.filter((q, k) => ans[k] === q.a).length); return; }
     if (a === 'exam') { ans[i] = +t.dataset.i; show(); }
     else if (a === 'jump') { i = +t.dataset.i; show(); }
     else if (a === 'prev') { i--; show(); }
@@ -420,13 +491,13 @@ function lektion(id, tab = 'gr') {
   const idx = D.kurs.indexOf(l), nxt = D.kurs[idx + 1];
   const tabs = [['gr', 'Grammatik'], ['vok', 'Wörter'], ['dia', 'Dialog'], ['ue', 'Übungen']];
   let body = '';
-  if (tab === 'gr') body = `<div class="card"><h2>${esc(l.gr.t)}</h2>${ru(l.gr.ru)}<p style="margin-top:12px">${esc(l.gr.de)}</p><p class="ru" lang="ru">${esc(l.gr.rde)}</p>
-      <h3 style="margin-top:16px">Beispiele</h3><ul class="list">${l.gr.ex.map(e => `<li class="vok"><div>${esc(e[0])}${ru(e[1])}</div>${speakBtn(e[0])}</li>`).join('')}</ul></div>
+  if (tab === 'gr') body = `<div class="card"><h2>${esc(l.gr.t)}</h2>${ru(l.gr.ru)}<p style="margin-top:12px">${esc(l.gr.de)} ${say(l.gr.de)}</p>${ru(l.gr.rde)}
+      <h3 style="margin-top:16px">Beispiele</h3><ul class="list">${l.gr.ex.map(e => `<li class="vok"><div>${esc(e[0])}${ru(e[1])}</div><div class="row" style="flex-wrap:nowrap">${speakBtn(e[0])}${mic(e[0])}</div></li>`).join('')}</ul></div>
       <div class="row end"><a class="btn primary" href="#lektion--${id}--vok">Weiter: Wörter ›</a></div>`;
-  if (tab === 'vok') body = `<div class="card"><ul class="list">${l.vok.map(v => `<li class="vok"><div><b>${esc(v[0])}</b>${ru(v[1])}</div>${speakBtn(v[0])}</li>`).join('')}</ul></div>
+  if (tab === 'vok') body = `<div class="card"><ul class="list">${l.vok.map(v => `<li class="vok"><div><b>${esc(v[0])}</b>${ru(v[1])}</div>${speakBtn(v[0].replace(/ –.*$/, ''))}${mic(v[0].replace(/ –.*$/, ''))}</li>`).join('')}</ul></div>
       <div class="row end"><a class="btn" href="#vokabeln--${id}">Als Karteikarten üben</a><a class="btn primary" href="#lektion--${id}--dia">Weiter: Dialog ›</a></div>`;
   if (tab === 'dia') body = `<div class="card dia"><div class="row" style="margin-bottom:12px"><button class="btn small" data-act="speakall">${speakIcon.replace('<svg', '<svg width="18" height="18" style="fill:none;stroke:currentColor;stroke-width:2"')} Ganzen Dialog anhören</button></div>
-      ${l.dia.map(d => `<div class="vok" style="margin-bottom:12px"><p><b>${esc(d[0])}:</b> ${esc(d[1])}${ru(d[2])}</p>${speakBtn(d[1])}</div>`).join('')}</div>
+      ${l.dia.map(d => `<div class="vok" style="margin-bottom:12px"><p><b>${esc(d[0])}:</b> ${esc(d[1])}${ru(d[2])}</p><div class="row" style="flex-wrap:nowrap">${speakBtn(d[1])}${mic(d[1])}</div></div>`).join('')}</div>
       <div class="row end"><a class="btn primary" href="#lektion--${id}--ue">Weiter: Übungen ›</a></div>`;
   if (tab === 'ue') body = `<div id="ue"></div>`;
   render(`${back('#kurs', 'Kurs')}<div class="muted small">${l.lv} · Lektion ${idx + 1} von ${D.kurs.length}</div><h1>${esc(l.t)}</h1>${ru(l.ru)}
@@ -512,7 +583,7 @@ function vokabeln(lessonId) {
         <div ${dir === 'ru' ? 'lang="ru"' : ''}>${esc(dir === 'de' ? v.de : v.ru)}</div>
         ${flipped ? `<div class="${dir === 'de' ? 'ru' : ''}" ${dir === 'de' ? 'lang="ru"' : ''} style="${dir === 'ru' ? 'color:var(--brand)' : 'display:block'}">${esc(dir === 'de' ? v.ru : v.de)}</div>` : '<div class="small muted">Antippen zum Umdrehen</div>'}
       </div>
-      <div class="row" style="justify-content:center">${speakBtn(v.de)}</div>
+      <div class="row" style="justify-content:center">${speakBtn(v.de.replace(/ –.*$/, ''))}${mic(v.de.replace(/ –.*$/, ''))}</div>
       ${flipped ? `<div class="grid two" style="margin-top:14px"><button class="btn" data-act="no">Noch nicht gewusst</button><button class="btn primary" data-act="yes">Gewusst</button></div>` : ''}`);
   }
   $app.onclick = e => {
@@ -770,10 +841,11 @@ function start() {
     ${backupDue ? `<div class="notice">Sichere deinen Fortschritt ab und zu als Datei – z. B. für einen Handywechsel.<div class="row" style="margin-top:8px"><button class="btn small" data-act="backup">Sicherung herunterladen</button></div></div>` : ''}
     <details class="level"><summary><span class="lv">Schritt für Schritt</span><span class="badge">${D.info.steps.filter(s => stepDone(s.id)).length}/${D.info.steps.length}</span><span class="spacer"></span><span class="chev">›</span></summary>
       <ol class="steps" style="margin-top:14px">${D.info.steps.map(s => `<li class="${stepDone(s.id) ? 'done' : ''}"><b>${esc(s.t)}</b>${ru(s.ru)}<div class="small" style="margin-top:4px">${esc(s.d)}</div>${ru(s.dru)}${s.go ? `<a class="btn small" style="margin-top:8px" href="#${s.go}">Öffnen</a>` : ''}</li>`).join('')}</ol></details>
+    <div class="row" style="margin-bottom:12px"><a class="btn small" href="#gespraech">Gespräch üben</a><a class="btn small" href="#teilen">App weiterempfehlen</a></div>
     <p class="small muted">Stand ${esc(D.info.stand)}. Keine Rechtsberatung – verbindlich ist die Auskunft deiner Einbürgerungsbehörde.</p>`);
   $app.onclick = e => {
     const m = e.target.closest('[data-ms]');
-    if (m) { const k = m.dataset.ms; S.milestones[k] = !S.milestones[k]; save(); if (S.milestones[k]) toast(k === 'urkunde' ? 'Herzlichen Glückwunsch! 🎉' : 'Antrag gestellt – viel Erfolg!'); start(); return; }
+    if (m) { const k = m.dataset.ms; S.milestones[k] = !S.milestones[k]; save(); if (S.milestones[k]) toast(k === 'urkunde' ? 'Herzlichen Glückwunsch! 🎉 Als Nächstes: „Mein erstes Mal wählen“' : 'Antrag gestellt – viel Erfolg!'); start(); return; }
     if (e.target.closest('[data-act="backup"]')) exportBackup();
   };
   cleanup = () => { $app.onclick = null; };
@@ -982,6 +1054,105 @@ function einstellungen() {
     else if (t.dataset.act === 'reset') { await idbPut('snap:vor-zuruecksetzen', fullBackup()); const keep = {}; SHARED.forEach(k => keep[k] = S[k]); S = Object.assign({}, defaults, keep); save(); applyPrefs(); toast('Zurückgesetzt'); einstellungen(); }
   };
   cleanup = () => { $app.onclick = null; $app.onchange = null; };
+}
+
+/* ---------- Einbürgerungsgespräch üben ---------- */
+function gespraech() {
+  const G = D.info.gespraech;
+  render(`${back('#mehr', 'Mehr')}<h1>Gespräch bei der Behörde üben</h1><p>${esc(G.intro[0])} ${say(G.intro[0])}</p>${ru(G.intro[1])}
+    <p class="small muted">So übst du: Frage anhören, laut antworten, dann die Musterantwort vergleichen. Mit dem Mikrofon prüft die App, ob du verstanden wirst.</p>
+    ${G.fragen.map((f, k) => `<div class="card"><div class="q-head"><span>Frage ${k + 1} von ${G.fragen.length}</span></div>
+      <div class="q-text">${esc(f.q)} ${say(f.q)}${ru(f.qru)}</div>
+      <details><summary class="btn small" style="display:inline-flex">Musterantwort zeigen</summary>
+        <div class="why" style="margin-top:10px"><b>SO KÖNNTEST DU ANTWORTEN</b>${esc(f.a)} ${say(f.a)} ${mic(f.a.split(' / ')[0])}${ru(f.aru)}</div>
+        <p class="small muted" style="margin:6px 0 0">Ersetze Jahreszahlen, Orte und Beruf durch deine eigenen.</p></details></div>`).join('')}
+    <div class="card"><h2>Das Bekenntnis – was unterschreibe ich?</h2><p>${esc(G.bekenntnis[0])} ${say(G.bekenntnis[0])}</p>${ru(G.bekenntnis[1])}</div>`);
+}
+
+/* ---------- Mein erstes Mal wählen ---------- */
+function waehlen() {
+  const W = D.info.waehlen; const ans = Array(W.quiz.length).fill(null);
+  const draw = () => {
+    const y = scrollY;
+    render(`${back('#mehr', 'Mehr')}<h1>Mein erstes Mal wählen</h1><p>${esc(W.intro[0])} ${say(W.intro[0])}</p>${ru(W.intro[1])}
+      ${W.punkte.map(([t, de, r]) => `<div class="card"><h3>${esc(t)}</h3><p style="margin:0">${esc(de)} ${say(t + '. ' + de)}</p>${ru(r)}</div>`).join('')}
+      <h2 style="margin-top:22px">Kurzes Quiz</h2>
+      ${W.quiz.map((q, k) => `<div class="card"><div class="q-text" style="font-size:1.05em">${k + 1}. ${esc(q.q)}</div><div class="opts">${q.o.map((o, i) => {
+        let c = ''; if (ans[k] !== null) { if (i === q.a) c = 'right'; else if (i === ans[k]) c = 'wrong'; }
+        return `<button class="opt ${c}" data-w="${k}" data-i="${i}" ${ans[k] !== null ? 'disabled' : ''}><span class="k">${ABC[i]}</span><span>${esc(o)}</span></button>`; }).join('')}</div></div>`).join('')}
+      ${ans.every(a => a !== null) ? `<div class="feedback ok">${ans.filter((a, k) => a === W.quiz[k].a).length} von ${W.quiz.length} richtig – du bist bereit für deine erste Wahl!</div>` : ''}
+      <p class="small muted" style="margin-top:14px">Alle Termine und Wahllokale nennt dir deine Gemeinde mit der Wahlbenachrichtigung.</p>`);
+    scrollTo(0, y);
+  };
+  $app.onclick = e => { const t = e.target.closest('[data-w]'); if (t) { ans[+t.dataset.w] = +t.dataset.i; activity(); draw(); } };
+  cleanup = () => { $app.onclick = null; };
+  draw();
+}
+
+/* ---------- Weiterempfehlen ---------- */
+const APP_URL = 'https://einbuergerung.micana.de/';
+const SHARE_TEXT = 'Kostenlose App zur Vorbereitung auf die Einbürgerung in Sachsen: alle 310 Testfragen, Deutschkurs A1–B1, Unterlagen-Checkliste – auch auf Russisch.';
+async function shareApp() {
+  if (navigator.share) { try { await navigator.share({ title: 'Einbürgerung Sachsen', text: SHARE_TEXT, url: APP_URL }); return; } catch (e) { if (e.name === 'AbortError') return; } }
+  try { await navigator.clipboard.writeText(`${SHARE_TEXT} ${APP_URL}`); toast('Link kopiert – jetzt einfügen und verschicken'); } catch { toast(APP_URL); }
+}
+function teilen() {
+  render(`${back('#mehr', 'Mehr')}<h1>App weiterempfehlen</h1><p class="muted">Kennst du jemanden, der sich einbürgern lassen möchte? Schick ihm die App – kostenlos, ohne Anmeldung.${ru('Знаете кого-то, кто хочет получить гражданство? Отправьте ему приложение — бесплатно и без регистрации.')}</p>
+    <div class="card" style="text-align:center"><img src="icons/qr.svg" alt="QR-Code zu ${APP_URL}" style="width:min(240px,70vw);aspect-ratio:1;image-rendering:pixelated;border:1px solid var(--line);border-radius:var(--radius)">
+      <p class="small" style="margin:10px 0 0">QR-Code mit der Handykamera scannen lassen</p><p class="eyebrow" style="margin:6px 0 0">${APP_URL.replace('https://', '').replace(/\/$/, '')}</p></div>
+    <div class="grid two">
+      <button class="btn primary" data-act="share">Teilen …</button>
+      <a class="btn" href="https://wa.me/?text=${encodeURIComponent(SHARE_TEXT + ' ' + APP_URL)}" target="_blank" rel="noopener">Per WhatsApp senden</a>
+      <a class="btn" href="https://t.me/share/url?url=${encodeURIComponent(APP_URL)}&text=${encodeURIComponent(SHARE_TEXT)}" target="_blank" rel="noopener">Per Telegram senden</a>
+      <button class="btn" data-act="copy">Link kopieren</button>
+    </div>`);
+  $app.onclick = async e => {
+    const t = e.target.closest('[data-act]'); if (!t) return;
+    if (t.dataset.act === 'share') shareApp();
+    if (t.dataset.act === 'copy') { try { await navigator.clipboard.writeText(APP_URL); toast('Link kopiert'); } catch { toast(APP_URL); } }
+  };
+  cleanup = () => { $app.onclick = null; };
+}
+
+/* ---------- Erfolgsbild nach der Simulation ---------- */
+async function erfolgsbild(score) {
+  try { await document.fonts.load('600 80px Lora'); } catch {}
+  const c = document.createElement('canvas'), W = 1080; c.width = W; c.height = W;
+  const g = c.getContext('2d');
+  const green = '#145c3f', gold = '#a87c14', ink = '#14231c', paper = '#f3f5f1';
+  g.fillStyle = paper; g.fillRect(0, 0, W, W);
+  // Linienmuster
+  g.strokeStyle = 'rgba(20,92,63,.08)'; g.lineWidth = 2;
+  for (let r = 20; r < 1500; r += 18) { g.beginPath(); g.arc(W * 1.1, -W * 0.25, r, 0, Math.PI * 2); g.stroke(); }
+  g.strokeStyle = 'rgba(168,124,20,.09)';
+  for (let r = 20; r < 1300; r += 22) { g.beginPath(); g.arc(-W * 0.1, W * 0.45, r, 0, Math.PI * 2); g.stroke(); }
+  // Karte
+  g.fillStyle = '#fff'; g.strokeStyle = '#cfd8d1'; g.lineWidth = 3;
+  g.beginPath(); g.roundRect ? g.roundRect(90, 230, W - 180, 640, 14) : g.rect(90, 230, W - 180, 640); g.fill(); g.stroke();
+  g.fillStyle = gold; g.fillRect(90, 230, W - 180, 10);
+  g.fillStyle = green; g.font = '500 30px ui-monospace, Menlo, monospace'; g.textAlign = 'center';
+  g.fillText('EINBÜRGERUNGSTEST · PRÜFUNGSSIMULATION', W / 2, 160);
+  // Stempel
+  g.save(); g.translate(W / 2, 520); g.rotate(-0.12);
+  g.strokeStyle = green; g.lineWidth = 12; g.beginPath(); g.arc(0, 0, 210, 0, Math.PI * 2); g.stroke();
+  g.lineWidth = 4; g.setLineDash([10, 10]); g.beginPath(); g.arc(0, 0, 182, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
+  g.fillStyle = green; let fs = 150; do { g.font = `600 ${fs}px Lora, Georgia, serif`; fs -= 6; } while (g.measureText(`${score}/33`).width > 300 && fs > 60); g.fillText(`${score}/33`, 0, 50);
+  g.font = '600 34px ui-monospace, Menlo, monospace'; g.fillText(score >= 17 ? 'BESTANDEN' : 'GEÜBT', 0, 120);
+  g.restore();
+  g.fillStyle = ink; g.font = '600 52px Lora, Georgia, serif';
+  const name = profileName();
+  g.fillText(name ? `${name} ist bereit!` : 'Bereit für den Test!', W / 2, 820);
+  g.fillStyle = '#44544c'; g.font = '400 30px system-ui, sans-serif';
+  g.fillText(new Date().toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' }), W / 2, 960);
+  g.fillStyle = green; g.font = '500 30px ui-monospace, Menlo, monospace';
+  g.fillText('einbuergerung.micana.de · kostenlos üben', W / 2, 1010);
+  const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+  const file = new File([blob], `einbuergerungstest-${score}-von-33.png`, { type: 'image/png' });
+  if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file], text: `Ich habe ${score} von 33 Fragen richtig! Üben kannst du hier: ${APP_URL}` }); return; } catch (e) { if (e.name === 'AbortError') return; } }
+  const url = URL.createObjectURL(blob);
+  const box = document.getElementById('erfolg');
+  if (box) box.innerHTML = `<img src="${url}" alt="Erfolgsbild ${score} von 33" style="width:100%;border-radius:var(--radius);border:1px solid var(--line)"><p class="small muted">Bild lange gedrückt halten, um es zu speichern oder zu teilen.</p>`;
+  if (!EMBED) download(file.name, blob, 'image/png');
 }
 
 /* ---------- Kalenderdatei (.ics) ---------- */
@@ -1311,4 +1482,23 @@ function maybeInstallSheet() {
 
 /* ---------- Start ---------- */
 boot().catch(err => { console.error(err); $app.innerHTML = '<div class="wrap"><div class="card"><h2>Die Daten konnten nicht geladen werden.</h2><p>Bitte Seite neu laden. Beim ersten Öffnen ist eine Internetverbindung nötig.</p></div></div>'; });
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+/* ---------- Updates: „Neue Version verfügbar“ ---------- */
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (reloading) return; reloading = true; save(); location.reload(); });
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    const offer = w => { if (!w || !navigator.serviceWorker.controller) return; showUpdate(w); };
+    if (reg.waiting) offer(reg.waiting);
+    reg.addEventListener('updatefound', () => { const w = reg.installing; w?.addEventListener('statechange', () => { if (w.state === 'installed') offer(w); }); });
+    // beim Zurückkehren in die App nach Updates schauen
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+    setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000);
+  }).catch(() => {});
+}
+function showUpdate(worker) {
+  if (document.getElementById('update')) return;
+  const el = document.createElement('div'); el.id = 'update'; el.className = 'update no-print'; el.setAttribute('role', 'status');
+  el.innerHTML = `<div><b>Neue Version verfügbar</b><span class="ru" lang="ru">Доступна новая версия</span></div><button class="btn small primary" data-up>Jetzt laden</button>`;
+  el.querySelector('[data-up]').onclick = () => { save(); worker.postMessage({ type: 'SKIP_WAITING' }); el.querySelector('[data-up]').textContent = 'Lädt …'; };
+  document.body.appendChild(el);
+}
