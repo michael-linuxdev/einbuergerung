@@ -1,13 +1,13 @@
 // Einbürgerung Sachsen – Lern-App (PWA). Vanilla JS, keine Abhängigkeiten.
-const VERSION = '1.3.0';
+const VERSION = '1.4.0';
 const $app = document.getElementById('app');
 const DAY = 86400000;
 
 /* ---------- Zustand (lokal im Browser) ---------- */
 const KEY = 'eb.v1';
-const defaults = { ru: true, theme: 'auto', size: 'm', srs: {}, wrong: {}, exams: [], kurs: {}, vok: {}, docs: {}, persona: ['angestellt'], check: {}, amt: null, einreise: '', ehe: false, testdate: '', b1date: '', planTime: '19:00', cv: null, kosten: null, fristen: [{ id: 'pass', t: 'Reisepass', d: '' }, { id: 'titel', t: 'Aufenthaltstitel', d: '' }], installSeen: false };
+const defaults = { ru: true, theme: 'auto', size: 'm', srs: {}, wrong: {}, exams: [], kurs: {}, vok: {}, docs: {}, persona: ['angestellt'], check: {}, amt: null, einreise: '', ehe: false, testdate: '', b1date: '', planTime: '19:00', cv: null, kosten: null, fristen: [{ id: 'pass', t: 'Reisepass', d: '' }, { id: 'titel', t: 'Aufenthaltstitel', d: '' }], installSeen: false, lang: '', onboarded: false };
 // Familienmodus: mehrere Profile; Unterlagen, Behörde, Kosten und Termin-Checklisten sind gemeinsam.
-const SHARED = ['docs', 'persona', 'amt', 'kosten', 'term', 'ru', 'theme', 'size', 'installSeen'];
+const SHARED = ['docs', 'persona', 'amt', 'kosten', 'term', 'ru', 'theme', 'size', 'installSeen', 'lang', 'onboarded'];
 Object.assign(defaults, { daily: {}, stat: {}, milestones: {}, term: {} });
 /* ---------- Sicheres Speichern ----------
    Jede Änderung geht sofort in localStorage UND IndexedDB (zweite Ablage).
@@ -86,7 +86,10 @@ function load() {
   const own = readJSON(pKey(P.active), {});
   let shared = readJSON('eb.shared', null);
   if (!shared) { shared = {}; const first = readJSON(KEY, {}); SHARED.forEach(k => { if (k in first) shared[k] = first[k]; }); writeJSON('eb.shared', shared, true); }
-  return Object.assign({}, defaults, own, shared);
+  const st = Object.assign({}, defaults, own, shared);
+  // Umstieg von „Russisch an/aus“ (bis 1.3) auf die Sprachwahl; wer schon gelernt hat, kennt die App bereits
+  if (!st.lang && ('ru' in shared)) { st.lang = shared.ru === false ? 'de' : 'ru'; }
+  return st;
 }
 function save() {
   const own = {}, shared = {};
@@ -124,11 +127,12 @@ async function boot() {
   D.general = D.q.filter(q => q.id.startsWith('g'));
   D.state = D.q.filter(q => q.id.startsWith('SN'));
   D.vok = D.kurs.flatMap(l => l.vok.map(v => ({ id: l.id + ':' + v[0], de: v[0], ru: v[1], lv: l.lv, lesson: l.id })));
+  if (S.lang === 'en') await loadEN();
   applyPrefs();
   window.addEventListener('hashchange', route);
   route();
   readerBar();
-  maybeInstallSheet();
+  installGate();
 }
 
 /* ---------- Helfer ---------- */
@@ -143,7 +147,8 @@ const ABC = ['A', 'B', 'C', 'D'];
 const EMBED = (() => { try { return window.self !== window.top; } catch { return true; } })(); // in eingebetteter Vorschau kein Drucken/Download
 function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), msg.length > 60 ? 4500 : 2200); }
 function applyPrefs() {
-  document.body.classList.toggle('no-ru', !S.ru);
+  document.body.classList.toggle('no-ru', !hl());
+  document.documentElement.dataset.hl = hl() || 'de';
   const r = document.documentElement;
   if (S.theme !== 'auto') { r.dataset.theme = S.theme; applyPrefs.set = true; }
   else if (applyPrefs.set) { r.removeAttribute('data-theme'); applyPrefs.set = false; }
@@ -151,10 +156,40 @@ function applyPrefs() {
 }
 
 /* ---------- Sprachausgabe Deutsch + Muttersprache, Spracherkennung ---------- */
+/* ---------- Sprachen: Deutsch immer, dazu eine Hilfssprache (Russisch, Englisch) oder „Nur Deutsch“ ----------
+   Hilfssprachen-Texte stehen in den Daten auf Russisch; data/en.json ordnet jedem russischen Text die englische Fassung zu. */
+const LANG = {
+  de: { bcp: 'de-DE', tag: 'DE', name: 'Nur Deutsch', de: 'Deutsch', adj: 'deutsche', read: 'Vorlesen', page: 'Seite auf Deutsch vorlesen' },
+  ru: { bcp: 'ru-RU', tag: 'RU', name: 'Русский', de: 'Russisch', adj: 'russische', read: 'Прочитать по-русски', page: 'Прочитать страницу по-русски' },
+  en: { bcp: 'en-GB', tag: 'EN', name: 'English', de: 'Englisch', adj: 'englische', read: 'Read aloud in English', page: 'Read this page in English' }
+};
+const hl = () => (S.lang === 'ru' || S.lang === 'en') ? S.lang : (S.lang === 'de' ? null : 'ru');
+const hlName = () => hl() ? LANG[hl()].de : 'Deutsch'; // „Russisch“ / „Englisch“
+const CYR = /[Ѐ-ӿ]/;
+let EN = null;
+async function loadEN() {
+  if (EN) return true;
+  try { EN = await fetch('data/en.json').then(r => r.json()); return true; } catch { EN = null; return false; }
+}
+// russischen Quelltext in die gewählte Hilfssprache bringen
+function tr(t) {
+  if (!t) return '';
+  if (hl() !== 'en') return t;
+  const e = EN && EN[t];
+  return e != null ? e : (CYR.test(t) ? '' : t);
+}
+async function setLang(l) {
+  if (l === 'en' && !(await loadEN())) { toast('Englisch konnte nicht geladen werden – bitte mit Internet erneut versuchen.'); return false; }
+  S.lang = l; S.ru = l !== 'de'; save(); applyPrefs(); readerBar();
+  return true;
+}
 const SAY_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 010 6"/></svg>';
 // kleiner Vorlese-Knopf als <span>, damit er auch in Antwort-Buttons stehen darf
-const say = (text, lang = 'de') => text ? `<span class="say" role="button" tabindex="0" data-say="${lang}" data-t="${esc(text)}" aria-label="${lang === 'ru' ? 'По-русски прочитать' : 'Vorlesen'}">${SAY_ICON}${lang === 'ru' ? '<small>RU</small>' : ''}</span>` : '';
-const ru = t => t ? `<span class="ru" lang="ru">${esc(t)} ${say(t, 'ru')}</span>` : '';
+// lang 'hl' = die gewählte Hilfssprache (Russisch oder Englisch)
+const say = (text, lang = 'de') => { if (lang === 'hl') lang = hl(); if (!text || !lang) return ''; const L = LANG[lang]; return `<span class="say" role="button" tabindex="0" data-say="${lang}" data-t="${esc(text)}" aria-label="${lang === 'de' ? 'Vorlesen' : esc(L.read)}">${SAY_ICON}${lang === 'de' ? '' : `<small>${L.tag}</small>`}</span>`; };
+// Text in der Hilfssprache (Quelle: russischer Text, Englisch kommt aus data/en.json); bei „Nur Deutsch“ leer
+const ruRaw = x => x && hl() ? `<span class="ru" lang="${hl()}">${esc(x)} ${say(x, 'hl')}</span>` : '';
+const ru = t => ruRaw(tr(t));
 const speakIcon = '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11"/></svg>';
 function speakBtn(text) { return `<button class="speak" data-act="speak" data-t="${esc(text)}" aria-label="Vorlesen">${speakIcon}</button>`; }
 const VOICE = {};
@@ -169,12 +204,12 @@ function speak(text, lang = 'de', onDone) {
   if (!('speechSynthesis' in window)) { toast('Sprachausgabe wird auf diesem Gerät nicht unterstützt.'); return; }
   speechSynthesis.cancel();
   const v = voiceFor(lang);
-  if (lang === 'ru' && !v && speechSynthesis.getVoices().length) toast('Keine russische Stimme installiert – in den Geräteeinstellungen unter Sprachausgabe hinzufügen.');
+  if (lang !== 'de' && !v && speechSynthesis.getVoices().length) toast(`Keine ${LANG[lang]?.adj || ''} Stimme installiert – in den Geräteeinstellungen unter Sprachausgabe hinzufügen.`);
   const my = ++sayToken, parts = chunks(text.replace(/\s*\/\s*/g, ', '));
   const next = k => {
     if (my !== sayToken) return;
     if (k >= parts.length) { onDone?.(); return; }
-    const u = new SpeechSynthesisUtterance(parts[k]); u.lang = lang === 'ru' ? 'ru-RU' : 'de-DE'; u.rate = lang === 'ru' ? 1 : 0.9; if (v) u.voice = v;
+    const u = new SpeechSynthesisUtterance(parts[k]); u.lang = (LANG[lang] || LANG.de).bcp; u.rate = lang === 'de' ? 0.9 : 1; if (v) u.voice = v;
     u.onend = () => next(k + 1); u.onerror = () => next(k + 1);
     speechSynthesis.speak(u);
   };
@@ -208,23 +243,24 @@ document.addEventListener('click', e => {
 }, true);
 document.addEventListener('keydown', e => { const s = e.target.closest?.('.say'); if (s && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); s.click(); } });
 
-// Ganze Seite vorlesen (Deutsch oder Russisch)
+// Ganze Seite vorlesen (Deutsch oder Hilfssprache)
 function pageText(lang) {
   const root = $app.cloneNode(true);
   root.querySelectorAll('.say, .speak, button.btn, .nav, script, style, .no-read, input, select, textarea').forEach(n => n.remove());
-  if (lang === 'ru') return [...root.querySelectorAll('.ru')].map(n => n.textContent.trim()).filter(Boolean).join('. ');
+  if (lang !== 'de') return [...root.querySelectorAll('.ru')].map(n => n.textContent.trim()).filter(Boolean).join('. ');
   root.querySelectorAll('.ru').forEach(n => n.remove());
   return root.textContent.replace(/\s+/g, ' ').replace(/[›‹]/g, '').trim();
 }
 function readerBar() {
-  if (document.getElementById('reader')) return;
+  document.getElementById('reader')?.remove();
   const el = document.createElement('div'); el.id = 'reader'; el.className = 'reader no-print';
-  el.innerHTML = `<span class="ico" aria-hidden="true">${SAY_ICON}</span><button data-read="de" aria-label="Seite auf Deutsch vorlesen">DE</button><button data-read="ru" aria-label="Страницу по-русски">RU</button><button data-read="stop" aria-label="Stopp" hidden>■</button>`;
+  const h = hl();
+  el.innerHTML = `<span class="ico" aria-hidden="true">${SAY_ICON}</span><button data-read="de" aria-label="Seite auf Deutsch vorlesen">DE</button>${h ? `<button data-read="${h}" aria-label="${esc(LANG[h].page)}">${LANG[h].tag}</button>` : ''}<button data-read="stop" aria-label="Stopp" hidden>■</button>`;
   el.onclick = e => {
     const b = e.target.closest('[data-read]'); if (!b) return;
     const stop = el.querySelector('[data-read="stop"]');
     if (b.dataset.read === 'stop') { stopSpeak(); stop.hidden = true; return; }
-    const t = pageText(b.dataset.read); if (!t) return toast(b.dataset.read === 'ru' ? 'Auf dieser Seite gibt es keinen russischen Text.' : 'Kein Text gefunden.');
+    const t = pageText(b.dataset.read); if (!t) return toast(b.dataset.read !== 'de' ? `Auf dieser Seite gibt es keinen ${LANG[b.dataset.read].adj}n Text.` : 'Kein Text gefunden.');
     stop.hidden = false; speak(t, b.dataset.read, () => { stop.hidden = true; });
   };
   document.body.appendChild(el);
@@ -248,9 +284,12 @@ function route() {
   const parts = (decodeURIComponent(location.hash).replace(/^#\/?/, '') || 'start').split(/--|\//);
   const [p, a, b] = parts;
   const parent = { lernen: 'test', pruefung: 'test', katalog: 'test', audio: 'test', glossar: 'test', lektion: 'kurs', vokabeln: 'kurs', dtz: 'kurs' }[p];
-  const extra = ['check', 'plan', 'lebenslauf', 'kosten', 'fristen', 'termine', 'briefe', 'installieren', 'profil', 'einstellungen', 'gespraech', 'waehlen', 'teilen'].includes(p);
+  // Erststart: erst Sprache, dann Einführung
+  if (!S.onboarded && p !== 'sprache' && p !== 'tutorial') { location.replace('#sprache--erst'); return; }
+  document.body.classList.toggle('onboarding', !S.onboarded && (p === 'sprache' || p === 'tutorial'));
+  const extra = ['check', 'plan', 'lebenslauf', 'kosten', 'fristen', 'termine', 'briefe', 'installieren', 'profil', 'einstellungen', 'gespraech', 'waehlen', 'teilen', 'sprache', 'tutorial'].includes(p);
   document.querySelectorAll('[data-nav]').forEach(n => n.classList.toggle('active', n.dataset.nav === p || n.dataset.nav === parent || (extra && n.dataset.nav === 'mehr' && innerWidth < 900)));
-  const views = { start, test, lernen, pruefung, katalog, kurs, lektion, vokabeln, dtz, docs, amt, check, briefe, einstellungen, mehr, plan, lebenslauf, kosten, fristen, installieren, audio, termine, glossar, profil, gespraech, waehlen, teilen };
+  const views = { start, test, lernen, pruefung, katalog, kurs, lektion, vokabeln, dtz, docs, amt, check, briefe, einstellungen, mehr, plan, lebenslauf, kosten, fristen, installieren, audio, termine, glossar, profil, gespraech, waehlen, teilen, sprache, tutorial };
   (views[p] || start)(a, b);
   closePop(); stopSpeak(); document.querySelector('#reader [data-read="stop"]')?.setAttribute('hidden', '');
   window.scrollTo(0, 0);
@@ -282,14 +321,16 @@ function mehr() {
        ['fristen', 'Ablaufdaten', 'Сроки документов', 'Warnung, bevor Pass oder Aufenthaltstitel ablaufen'],
        ['termine', 'Was mitbringen?', 'Что взять с собой?', 'Listen für Test, B1-Prüfung und Behördentermin'],
        ['audio', 'Audio-Modus', 'Аудиорежим', 'Fragen vorlesen lassen – für unterwegs'],
-       ['glossar', 'Wörterbuch', 'Словарь', 'Schwierige Begriffe auf Russisch erklärt'],
+       ['glossar', 'Wörterbuch', 'Словарь', 'Schwierige Begriffe einfach erklärt'],
        ['profil', 'Familienmodus', 'Семейный режим', 'Mehrere Personen auf einem Gerät'],
        ['gespraech', 'Gespräch bei der Behörde üben', 'Подготовка к беседе в ведомстве', 'Typische Fragen, Musterantworten, das Bekenntnis erklärt'],
        ['waehlen', 'Mein erstes Mal wählen', 'Мои первые выборы', 'Wahlen in Sachsen einfach erklärt – mit Quiz'],
        ['teilen', 'App weiterempfehlen', 'Порекомендовать приложение', 'Per WhatsApp, Telegram oder QR-Code'],
        ['briefe', 'Briefvorlagen', 'Шаблоны писем', 'An die Behörde schreiben – zum Kopieren'],
        ['installieren', 'Als App installieren', 'Установить как приложение', 'Anleitung für iPhone, iPad und Android'],
-       ['einstellungen', 'Einstellungen & Infos', 'Настройки и информация', 'Russisch, Schriftgröße, Sicherung, Quellen']]
+       ['sprache', 'Sprache ändern', 'Изменить язык', `Jetzt: ${hl() ? 'Deutsch + ' + LANG[hl()].de : 'Nur Deutsch'}`],
+       ['tutorial', 'Einführung ansehen', 'Посмотреть введение', 'Kurze Tour durch die App – jederzeit wiederholbar'],
+       ['einstellungen', 'Einstellungen & Infos', 'Настройки и информация', 'Sprache, Schriftgröße, Sicherung, Quellen']]
       .map(([h, t, r, d]) => `<a class="tile" href="#${h}"><h3>${t}</h3>${ru(r)}<div class="meta">${d}</div><span class="arrow">›</span></a>`).join('')}
   </div>`);
 }
@@ -312,7 +353,7 @@ function test() {
       <a class="tile" href="#pruefung"><h3>Prüfung simulieren</h3>${ru('Пробный экзамен')}<div class="meta">Wie im echten Test: 33 Fragen, 60 Minuten, Auswertung am Ende.</div><span class="arrow">›</span></a>
       <a class="tile" href="#lernen--fehler"><h3>Meine Fehler</h3>${ru('Мои ошибки')}<div class="meta">${wrong} Fragen zuletzt falsch beantwortet.</div><span class="arrow">›</span></a>
       <a class="tile" href="#audio"><h3>Audio-Modus</h3>${ru('Аудиорежим')}<div class="meta">Fragen und Antworten vorlesen lassen – für unterwegs.</div><span class="arrow">›</span></a>
-      <a class="tile" href="#glossar"><h3>Wörterbuch</h3>${ru('Словарь')}<div class="meta">${D.glossar.length} schwierige Begriffe mit russischer Erklärung.</div><span class="arrow">›</span></a>
+      <a class="tile" href="#glossar"><h3>Wörterbuch</h3>${ru('Словарь')}<div class="meta">${D.glossar.length} schwierige Begriffe${hl() ? ` mit ${LANG[hl()].adj}r Erklärung` : ', einfach erklärt'}.</div><span class="arrow">›</span></a>
       <a class="tile" href="#katalog"><h3>Alle 310 Fragen</h3>${ru('Все 310 вопросов')}<div class="meta">Katalog mit Lösungen, Suche und Themenfilter.</div><span class="arrow">›</span></a>
     </div>
     <div style="margin-top:14px">${statsCard()}</div>
@@ -325,13 +366,13 @@ function qCard(q, { idx, total, sel = null, reveal = false, mode = '' } = {}) {
   return `
     <div class="card">
       <div class="q-head"><span>${q.id.startsWith('SN') ? 'Sachsen' : 'Frage'} ${q.n}${q.t && q.t !== 'Sachsen' ? ' · ' + esc(q.t) : ''}</span>${idx != null ? `<span>${idx + 1} / ${total}</span>` : ''}</div>
-      <div class="q-text">${gloss(esc(q.q))} ${say(q.q + ' … ' + q.o.map((o, i) => ABC[i] + ': ' + o).join('. '))}${q.ru ? `<span class="ru" lang="ru">${esc(q.ru)} ${say(q.ru + ' … ' + (q.ruo || []).map((o, i) => ABC[i] + ': ' + o).join('. '), 'ru')}</span>` : ''}</div>
+      <div class="q-text">${gloss(esc(q.q))} ${say(q.q + ' … ' + q.o.map((o, i) => ABC[i] + ': ' + o).join('. '))}${tr(q.ru) && hl() ? `<span class="ru" lang="${hl()}">${esc(tr(q.ru))} ${say(tr(q.ru) + ' … ' + (q.ruo || []).map((o, i) => ABC[i] + ': ' + tr(o)).join('. '), 'hl')}</span>` : ''}</div>
       ${q.img ? `<img class="q-img" src="${q.img}" alt="Abbildung zu Frage ${esc(q.n)}" loading="lazy">` : ''}
       <div class="opts">${q.o.map((o, i) => {
         let cls = '';
         if (reveal) { if (i === q.a) cls = 'right'; else if (i === sel) cls = 'wrong'; }
         else if (i === sel) cls = 'sel';
-        return `<button class="opt ${cls}" data-act="${mode}" data-i="${i}" ${reveal && mode !== 'exam' ? 'disabled' : ''}><span class="k">${ABC[i]}</span><span>${gloss(esc(o))}${ruOpts[i] && ruOpts[i] !== o ? ru(ruOpts[i]) : ''}</span></button>`;
+        return `<button class="opt ${cls}" data-act="${mode}" data-i="${i}" ${reveal && mode !== 'exam' ? 'disabled' : ''}><span class="k">${ABC[i]}</span><span>${gloss(esc(o))}${ruOpts[i] && tr(ruOpts[i]) !== o ? ru(ruOpts[i]) : ''}</span></button>`;
       }).join('')}</div>
       ${reveal && q.e ? `<div class="why"><b>WARUM?</b>${esc(q.e[0])} ${say(q.e[0])}${ru(q.e[1])}</div>` : ''}
     </div>`;
@@ -359,7 +400,7 @@ function lernen(filter, arg) {
     render(`${back('#test', 'Test')}
       ${queue.length <= 40 ? `<div class="segs" aria-label="Fortschritt ${i + 1} von ${queue.length}">${queue.map((_, k) => `<i class="${k < i ? 'd' : ''}"></i>`).join('')}</div>` : `<div style="margin-bottom:12px">${bar(pct(i, queue.length))}</div>`}
       ${qCard(q, { sel, reveal: revealed, mode: 'learn' })}
-      ${revealed ? `<div class="feedback ${sel === q.a ? 'ok' : 'bad'}">${sel === q.a ? 'Richtig!' : 'Leider falsch. Richtig ist ' + ABC[q.a] + '.'}${ru(sel === q.a ? 'Правильно!' : 'К сожалению, неверно. Правильный ответ: ' + ABC[q.a] + '.')}</div>
+      ${revealed ? `<div class="feedback ${sel === q.a ? 'ok' : 'bad'}">${sel === q.a ? 'Richtig!' : 'Leider falsch. Richtig ist ' + ABC[q.a] + '.'}${ruRaw(sel === q.a ? tr('Правильно!') : tr('К сожалению, неверно. Правильный ответ: ') + ABC[q.a] + '.')}</div>
         <div class="row end" style="margin-top:14px"><button class="btn primary" data-act="next">Weiter</button></div>` : ''}`);
   }
   $app.onclick = e => {
@@ -442,7 +483,7 @@ function katalog() {
   let topic = 'Alle', term = '';
   function list() {
     const t = term.toLowerCase();
-    return D.q.filter(q => (topic === 'Alle' || q.t === topic) && (!t || (q.q + ' ' + q.o.join(' ') + ' ' + (q.ru || '')).toLowerCase().includes(t) || String(q.n) === t));
+    return D.q.filter(q => (topic === 'Alle' || q.t === topic) && (!t || (q.q + ' ' + q.o.join(' ') + ' ' + tr(q.ru || '')).toLowerCase().includes(t) || String(q.n) === t));
   }
   function draw() {
     const items = list();
@@ -450,7 +491,7 @@ function katalog() {
       <div class="card flat"><div class="q-head"><span>${q.id.startsWith('SN') ? 'Sachsen' : 'Frage'} ${q.n} · ${esc(q.t)}</span>${S.srs[q.id] ? `<span class="badge ${S.srs[q.id].l >= 4 ? 'ok' : ''}">Stufe ${S.srs[q.id].l}</span>` : ''}</div>
         <div class="q-text" style="font-size:1em">${esc(q.q)}${ru(q.ru)}</div>
         ${q.img ? `<img class="q-img" src="${q.img}" alt="" loading="lazy">` : ''}
-        <div class="small"><b style="color:var(--ok)">✓ ${esc(q.o[q.a])}</b>${q.ruo && q.ruo[q.a] !== q.o[q.a] ? ru(q.ruo[q.a]) : ''}</div>${q.e ? `<div class="tip">${esc(q.e[0])}${ru(q.e[1])}</div>` : ''}</div>`).join('') || '<p class="muted">Keine Treffer.</p>';
+        <div class="small"><b style="color:var(--ok)">✓ ${esc(q.o[q.a])}</b>${q.ruo && tr(q.ruo[q.a]) !== q.o[q.a] ? ru(q.ruo[q.a]) : ''}</div>${q.e ? `<div class="tip">${esc(q.e[0])}${ru(q.e[1])}</div>` : ''}</div>`).join('') || '<p class="muted">Keine Treffer.</p>';
     document.getElementById('cnt').textContent = `${items.length} Fragen`;
   }
   render(`${back('#test', 'Test')}<h1>Fragenkatalog</h1>
@@ -470,7 +511,7 @@ function kurs() {
   const vokDue = D.vok.filter(v => S.vok[v.id] && S.vok[v.id].due <= Date.now()).length;
   const next = D.kurs.find(l => !S.kurs[l.id]?.done);
   render(`<h1>Deutschkurs A1 – B1</h1>
-    <p class="muted">30 Lektionen mit Grammatik, Wortschatz (mit Sprachausgabe), Dialogen und Übungen – alle Erklärungen auch auf Russisch. Ziel: das B1-Zertifikat für die Einbürgerung.${ru('30 уроков с грамматикой, словами (с озвучкой), диалогами и упражнениями — все объяснения также на русском. Цель: сертификат B1 для натурализации.')}</p>
+    <p class="muted">30 Lektionen mit Grammatik, Wortschatz (mit Sprachausgabe), Dialogen und Übungen – ${hl() ? `alle Erklärungen auch auf ${hlName()}` : 'mit einfachen Erklärungen'}. Ziel: das B1-Zertifikat für die Einbürgerung.${ru('30 уроков с грамматикой, словами (с озвучкой), диалогами и упражнениями — все объяснения также на русском. Цель: сертификат B1 для натурализации.')}</p>
     <div class="grid two" style="margin-bottom:8px">
       <a class="tile" href="#vokabeln"><h3>Vokabeltrainer</h3><div class="meta">${D.vok.length} Wörter · ${vokDue} heute fällig</div><span class="arrow">›</span></a>
       <a class="tile" href="#dtz"><h3>B1-Prüfung (DTZ) üben</h3><div class="meta">Hören, Lesen, Schreiben, Sprechen</div><span class="arrow">›</span></a>
@@ -574,14 +615,21 @@ function vokabeln(lessonId) {
   const total = D.vok.length, L = learned(S.vok, D.vok.map(v => v.id));
   if (!pool.length) { render(`${back('#kurs', 'Kurs')}<h1>Vokabeltrainer</h1><div class="card"><p>Heute ist nichts fällig. Bearbeite eine neue Lektion, dann kommen neue Wörter dazu.</p><p class="muted">${L} von ${total} Wörtern sicher gelernt.</p></div>`); return; }
   let i = 0, flipped = false, dir = 'de';
+  const H = hl();
   function show() {
-    const v = pool[i];
+    const v = pool[i], tv = H ? tr(v.ru) : '';
+    // „Nur Deutsch“: Karte zeigt das Wort, Rückseite übt Aussprache und Bedeutung selbst einschätzen
+    if (!H || !tv) dir = 'de';
+    const front = dir === 'de' ? `<div>${esc(v.de)}</div>` : `<div lang="${H}">${esc(tv)}</div>`;
+    const backSide = !flipped ? '<div class="small muted">Antippen zum Umdrehen</div>'
+      : dir === 'de' ? (tv ? `<div class="ru" lang="${H}" style="display:block">${esc(tv)}</div>` : '<div class="small muted">Weißt du, was das Wort bedeutet? Sprich es laut nach.</div>')
+      : `<div style="color:var(--brand)">${esc(v.de)}</div>`;
     render(`${back(lessonId ? '#lektion--' + lessonId + '--vok' : '#kurs', 'Zurück')}<h1>Vokabeltrainer</h1>
-      <div class="chips"><button class="chip ${dir === 'de' ? 'on' : ''}" data-dir="de">Deutsch → Russisch</button><button class="chip ${dir === 'ru' ? 'on' : ''}" data-dir="ru">Russisch → Deutsch</button></div>
+      ${H ? `<div class="chips"><button class="chip ${dir === 'de' ? 'on' : ''}" data-dir="de">Deutsch → ${hlName()}</button><button class="chip ${dir !== 'de' ? 'on' : ''}" data-dir="${H}">${hlName()} → Deutsch</button></div>` : ''}
       <div class="row" style="margin-bottom:10px"><div style="flex:1">${bar(pct(i, pool.length))}</div><span class="small muted">${i + 1}/${pool.length}</span></div>
       <div class="card flash" data-act="flip" role="button" aria-label="Karte umdrehen">
-        <div ${dir === 'ru' ? 'lang="ru"' : ''}>${esc(dir === 'de' ? v.de : v.ru)}</div>
-        ${flipped ? `<div class="${dir === 'de' ? 'ru' : ''}" ${dir === 'de' ? 'lang="ru"' : ''} style="${dir === 'ru' ? 'color:var(--brand)' : 'display:block'}">${esc(dir === 'de' ? v.ru : v.de)}</div>` : '<div class="small muted">Antippen zum Umdrehen</div>'}
+        ${front}
+        ${backSide}
       </div>
       <div class="row" style="justify-content:center">${speakBtn(v.de.replace(/ –.*$/, ''))}${mic(v.de.replace(/ –.*$/, ''))}</div>
       ${flipped ? `<div class="grid two" style="margin-top:14px"><button class="btn" data-act="no">Noch nicht gewusst</button><button class="btn primary" data-act="yes">Gewusst</button></div>` : ''}`);
@@ -590,7 +638,7 @@ function vokabeln(lessonId) {
     const t = e.target.closest('[data-act],[data-dir]'); if (!t) return;
     if (t.dataset.dir) { dir = t.dataset.dir; flipped = false; return show(); }
     const a = t.dataset.act;
-    if (a === 'flip') { flipped = !flipped; if (flipped && dir === 'ru') speak(pool[i].de); show(); }
+    if (a === 'flip') { flipped = !flipped; if (flipped && dir !== 'de') speak(pool[i].de); show(); }
     else if (a === 'speak') speak(t.dataset.t);
     else if (a === 'yes' || a === 'no') {
       srsGrade(S.vok, pool[i].id, a === 'yes'); activity();
@@ -624,7 +672,7 @@ function dtz(part, id) {
   if ((part === 'hoeren' || part === 'lesen') && id) return dtzAufgabe(part, id);
   const done = S.dtzDone || {};
   const tiles = (arr, part, meta) => arr.map(x => `<a class="tile" href="#dtz--${part}--${x.id}"><h3>${esc(x.t)}</h3>${ru(x.ru)}<div class="meta">${done[x.id] != null ? `<span class="badge ${done[x.id] === x.q.length ? 'ok' : 'warn'}">${done[x.id]}/${x.q.length} richtig</span>` : meta}</div><span class="arrow">›</span></a>`).join('');
-  render(`${back('#kurs', 'Kurs')}<h1>B1-Prüfung (DTZ)</h1><p>${esc(D.dtz.info.de)}</p><p class="ru" lang="ru">${esc(D.dtz.info.ru)}</p>
+  render(`${back('#kurs', 'Kurs')}<h1>B1-Prüfung (DTZ)</h1><p>${esc(D.dtz.info.de)}</p>${ru(D.dtz.info.ru)}
     <h2 style="margin-top:20px">Hören</h2>${ru('Аудирование')}<div class="grid two" style="margin-top:8px">${tiles(D.dtz.hoeren, 'hoeren', 'Anhören und Fragen beantworten')}</div>
     <h2 style="margin-top:20px">Lesen</h2>${ru('Чтение')}<div class="grid two" style="margin-top:8px">${tiles(D.dtz.lesen, 'lesen', 'Text lesen und Fragen beantworten')}</div>
     <h2 style="margin-top:20px">Schreiben</h2><div class="grid two">${D.dtz.schreiben.map(w => `<a class="tile" href="#dtz--schreiben--${w.id}"><h3>${esc(w.t)}</h3>${ru(w.ru)}<div class="meta">4 Leitpunkte · mit Musterlösung</div><span class="arrow">›</span></a>`).join('')}</div>
@@ -815,9 +863,9 @@ function start() {
   render(`
     <div class="hero">
       <div class="row"><span class="eyebrow">Deine Lernhilfe · Einbürgerung in Sachsen</span><span class="spacer"></span>${st ? `<span class="streak" title="Lerntage am Stück">🔥 ${st} ${st === 1 ? 'Tag' : 'Tage'}</span>` : ''}</div>
-      <h1>${g}${name ? ', ' + esc(name) : ''}.</h1>${ru(gru + (name ? ', ' + name : '') + '.')}
+      <h1>${g}${name ? ', ' + esc(name) : ''}.</h1>${ruRaw(tr(gru) + (name ? ', ' + name : '') + '.')}
       <p class="small muted" style="margin:8px 0 0">Private, kostenlose Lernhilfe – kein Angebot einer Behörde.${ru('Частная бесплатная помощь в обучении — не сервис ведомства.')}</p>
-      <div style="margin-top:10px"><a class="who" href="#profil">👤 ${P.list.length > 1 ? `${esc(name || 'Profil')} wechseln` : 'Familienmodus'}</a></div>
+      <div class="row" style="margin-top:10px;gap:8px"><a class="who" href="#profil">👤 ${P.list.length > 1 ? `${esc(name || 'Profil')} wechseln` : 'Familienmodus'}</a><a class="who" href="#sprache">🌐 ${hl() ? 'DE + ' + LANG[hl()].tag : 'Nur DE'}</a></div>
     </div>
     <div class="doc">
       <div class="field"><span>Einbürgerungstest</span><span>${S.testdate ? 'Termin ' + fmtDate(new Date(S.testdate + 'T00:00')) : '<a href="#plan">Termin eintragen</a>'}</span></div>
@@ -902,7 +950,7 @@ function audio() {
       await wait(3500); if (my !== token) return;
       await say(`Richtig ist ${ABC[q.a]}: ${clean(q.o[q.a])}.`); if (my !== token) return;
       if (q.e) { await wait(300); await say(q.e[0]); if (my !== token) return; }
-      if (ruEx && q.e) { await wait(300); await say(q.e[1], 'ru-RU'); if (my !== token) return; }
+      if (ruEx && hl() && q.e && tr(q.e[1])) { await wait(300); await say(tr(q.e[1]), LANG[hl()].bcp); if (my !== token) return; }
       await wait(1200);
       i++;
     }
@@ -913,7 +961,7 @@ function audio() {
     const q = pool[i];
     render(`${back('#test', 'Test')}<h1>Audio-Modus</h1><p class="muted">Fragen, Antworten und Erklärungen werden nacheinander vorgelesen – zum Lernen unterwegs. Nach den Antworten bleiben 3 Sekunden zum Nachdenken.${ru('Вопросы, ответы и объяснения зачитываются по очереди — для учёбы в дороге.')}</p>
       <div class="chips">${modes.map(([k, n]) => `<button class="chip ${mode === k ? 'on' : ''}" data-mode="${k}">${n}</button>`).join('')}</div>
-      <label class="check" style="margin-bottom:14px"><input type="checkbox" id="ruex" ${ruEx ? 'checked' : ''}><div>Erklärung zusätzlich auf Russisch vorlesen${ru('Дополнительно зачитывать объяснение на русском')}</div></label>
+      ${hl() ? `<label class="check" style="margin-bottom:14px"><input type="checkbox" id="ruex" ${ruEx ? 'checked' : ''}><div>Erklärung zusätzlich auf ${hlName()} vorlesen${ru('Дополнительно зачитывать объяснение на русском')}</div></label>` : ''}
       ${q ? `<div class="card"><div class="q-head"><span>Frage ${q.n} · ${esc(q.t)}</span><span>${i + 1} / ${pool.length}</span></div><div class="q-text">${esc(q.q)}</div>
         <ol class="small" style="margin:0;padding-left:1.2em">${q.o.map((o, k) => `<li style="${playing ? '' : ''}">${esc(o)}</li>`).join('')}</ol></div>` : ''}
       <div class="player"><button class="btn round" data-act="prev" aria-label="Vorherige Frage">‹</button><button class="btn primary round" data-act="toggle" aria-label="${playing ? 'Pause' : 'Abspielen'}">${playing ? '❚❚' : '▶'}</button><button class="btn round" data-act="next" aria-label="Nächste Frage">›</button></div>
@@ -954,7 +1002,7 @@ function closePop() { document.getElementById('pop')?.remove(); }
 function showPop(k) {
   closePop(); const g = D.glossar[k]; if (!g) return;
   const el = document.createElement('div'); el.id = 'pop'; el.className = 'pop'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', g.w);
-  el.innerHTML = `<div class="row"><h3>${esc(g.w)}</h3><span class="spacer"></span>${speakBtn(g.w)}<button class="btn small ghost" data-close aria-label="Schließen">✕</button></div><p style="margin:0">${esc(g.de)}</p><span class="ru" lang="ru" style="display:block">${esc(g.ru)}</span>`;
+  el.innerHTML = `<div class="row"><h3>${esc(g.w)}</h3><span class="spacer"></span>${speakBtn(g.w)}<button class="btn small ghost" data-close aria-label="Schließen">✕</button></div><p style="margin:0">${esc(g.de)}</p>${ru(g.ru)}`;
   el.onclick = e => { if (e.target.closest('[data-close]')) closePop(); const s = e.target.closest('[data-act="speak"]'); if (s) speak(s.dataset.t); };
   document.body.appendChild(el);
 }
@@ -971,7 +1019,7 @@ function glossar() {
     <input class="text" type="search" id="gs" placeholder="Begriff suchen …" aria-label="Begriff suchen" style="margin-bottom:12px"><div id="gl"></div>`);
   const draw = () => {
     const t = term.toLowerCase();
-    document.getElementById('gl').innerHTML = `<div class="card"><ul class="list">${D.glossar.filter(g => !t || (g.w + g.de + g.ru).toLowerCase().includes(t)).sort((a, b) => a.w.localeCompare(b.w, 'de')).map(g => `<li class="vok"><div><b>${esc(g.w)}</b><div class="small">${esc(g.de)}</div><span class="ru" lang="ru">${esc(g.ru)}</span></div>${speakBtn(g.w)}</li>`).join('')}</ul></div>`;
+    document.getElementById('gl').innerHTML = `<div class="card"><ul class="list">${D.glossar.filter(g => !t || (g.w + g.de + tr(g.ru)).toLowerCase().includes(t)).sort((a, b) => a.w.localeCompare(b.w, 'de')).map(g => `<li class="vok"><div><b>${esc(g.w)}</b><div class="small">${esc(g.de)}</div>${ru(g.ru)}</div>${speakBtn(g.w)}</li>`).join('')}</ul></div>`;
   };
   document.getElementById('gs').oninput = e => { term = e.target.value.trim(); draw(); };
   $app.onclick = e => { const s = e.target.closest('[data-act="speak"]'); if (s) speak(s.dataset.t); };
@@ -1015,7 +1063,8 @@ async function storageStatus() {
 }
 function einstellungen() {
   render(`<h1>Einstellungen</h1>
-    <div class="card"><label class="check"><input type="checkbox" id="ru" ${S.ru ? 'checked' : ''}><div><b>Russische Erklärungen anzeigen</b><span class="ru" lang="ru" style="display:block">Показывать пояснения на русском</span></div></label></div>
+    <div class="card"><h2>Sprache</h2>${ru('Язык')}<p class="small" style="margin-top:8px">Deutsch steht immer an erster Stelle. Dazu kannst du eine Hilfssprache wählen – jederzeit änderbar.</p>${langChoice()}
+      <div class="row" style="margin-top:4px"><a class="btn small" href="#tutorial">Einführung wiederholen</a></div></div>
     <div class="card"><label class="lbl">Schriftgröße</label><div class="chips">${[['m', 'Normal'], ['l', 'Groß'], ['xl', 'Sehr groß']].map(([k, n]) => `<button class="chip ${S.size === k ? 'on' : ''}" data-size="${k}">${n}</button>`).join('')}</div>
       <label class="lbl">Darstellung</label><div class="chips" style="margin:0">${[['auto', 'Automatisch'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([k, n]) => `<button class="chip ${S.theme === k ? 'on' : ''}" data-theme="${k}">${n}</button>`).join('')}</div></div>
     <div class="card"><h2>Speichern & Sichern</h2>
@@ -1026,7 +1075,7 @@ function einstellungen() {
       <h3 style="margin-top:18px">Automatische Sicherungspunkte</h3><p class="small muted">Einmal täglich, die letzten 7 Tage.</p><div id="snaps"></div>
       <div class="row" style="margin-top:12px"><button class="btn small ghost" data-act="reset">Lernstand dieses Profils zurücksetzen</button></div></div>
     <div class="card"><h2>Familienmodus</h2><p class="small">${P.list.length} Profil${P.list.length > 1 ? 'e' : ''} auf diesem Gerät.</p><a class="btn small" href="#profil">Profile verwalten</a></div>
-    <div class="card"><h2>App installieren</h2><p class="small">Installiert funktioniert alles auch ohne Internet, und der Browser hält deine Daten zuverlässiger.</p><a class="btn small" href="#installieren">Anleitung für dein Gerät</a></div>
+    <div class="card"><h2>App installieren</h2><p class="small">${platform().standalone ? 'Die App ist installiert. 👍' : 'Installiert funktioniert alles auch ohne Internet, und der Browser hält deine Daten zuverlässiger.'}</p><a class="btn small" href="#installieren">Anleitung für dein Gerät</a></div>
     <div class="card"><h2>Quellen & Hinweise</h2>
       <p class="small"><b>Fragenkatalog:</b> ${esc(D.qmeta.source)}. Amtliches Werk nach § 5 UrhG, unverändert wiedergegeben. Lösungen: ${esc(D.qmeta.answers)}.</p>
       <p class="small">${esc(D.qmeta.translation_ru)}. ${esc(D.qmeta.images)}. Schrift „Lora“ unter SIL Open Font License.</p>
@@ -1036,12 +1085,12 @@ function einstellungen() {
       <p class="small muted">Version ${VERSION}</p></div>`);
   storageStatus(); snapshotList();
   $app.onchange = e => {
-    if (e.target.id === 'ru') { S.ru = e.target.checked; save(); applyPrefs(); }
     if (e.target.id === 'imp') { const f = e.target.files[0]; if (!f) return; f.text().then(t => { restoreBackup(JSON.parse(t)); applyPrefs(); toast('Sicherung geladen'); einstellungen(); }).catch(() => toast('Datei ungültig – bitte eine Sicherungsdatei dieser App wählen.')); }
   };
   $app.onclick = async e => {
-    const t = e.target.closest('[data-size],[data-theme],[data-act],[data-snap]'); if (!t) return;
-    if (t.dataset.size) { S.size = t.dataset.size; save(); applyPrefs(); einstellungen(); }
+    const t = e.target.closest('[data-size],[data-theme],[data-act],[data-snap],[data-lang]'); if (!t) return;
+    if (t.dataset.lang) { if (await setLang(t.dataset.lang)) { toast(langToast()); einstellungen(); } }
+    else if (t.dataset.size) { S.size = t.dataset.size; save(); applyPrefs(); einstellungen(); }
     else if (t.dataset.theme) { S.theme = t.dataset.theme; save(); applyPrefs(); einstellungen(); }
     else if (t.dataset.act === 'export') { exportBackup(); einstellungen(); }
     else if (t.dataset.snap) {
@@ -1091,7 +1140,7 @@ function waehlen() {
 
 /* ---------- Weiterempfehlen ---------- */
 const APP_URL = 'https://einbuergerung.micana.de/';
-const SHARE_TEXT = 'Kostenlose App zur Vorbereitung auf die Einbürgerung in Sachsen: alle 310 Testfragen, Deutschkurs A1–B1, Unterlagen-Checkliste – auch auf Russisch.';
+const SHARE_TEXT = 'Kostenlose App zur Vorbereitung auf die Einbürgerung in Sachsen: alle 310 Testfragen, Deutschkurs A1–B1, Unterlagen-Checkliste – auch auf Russisch und Englisch.';
 async function shareApp() {
   if (navigator.share) { try { await navigator.share({ title: 'Einbürgerung Sachsen', text: SHARE_TEXT, url: APP_URL }); return; } catch (e) { if (e.name === 'AbortError') return; } }
   try { await navigator.clipboard.writeText(`${SHARE_TEXT} ${APP_URL}`); toast('Link kopiert – jetzt einfügen und verschicken'); } catch { toast(APP_URL); }
@@ -1402,13 +1451,15 @@ function fristen() {
   cleanup = () => { $app.onclick = null; $app.onchange = null; };
 }
 
-/* ---------- Als App installieren ---------- */
-let deferredPrompt = null;
+/* ---------- Als App installieren ----------
+   Handy/Tablet im Browser: Vollbild-Hinweis „Zuerst installieren“ bei jedem neuen Besuch.
+   Weiter im Browser geht nur für ein paar Stunden; danach erscheint der Hinweis wieder. Dazu ein Balken oben. */
+let deferredPrompt = null, appInstalled = false;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; document.querySelectorAll('[data-act="native-install"]').forEach(b => b.hidden = false); });
-window.addEventListener('appinstalled', () => { S.installSeen = true; save(); toast('App installiert'); closeSheet(); });
+window.addEventListener('appinstalled', () => { appInstalled = true; S.installSeen = true; save(); toast('App installiert'); closeSheet(); if (document.getElementById('gate')) installGate(true); });
 function platform() {
   const ua = navigator.userAgent;
-  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true;
   const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const android = /Android/.test(ua);
   const inapp = /Instagram|FBAN|FBAV|Line\/|Telegram|WhatsApp|TikTok|; wv\)/i.test(ua);
@@ -1420,54 +1471,124 @@ function platform() {
   return { os: ios ? 'ios' : android ? 'android' : 'desktop', browser, standalone };
 }
 const SHARE_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align:-3px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M12 3v12M8 7l4-4 4 4M5 12v8h14v-8"/></svg>';
+// Schritte je Gerät: [Deutsch, Hilfssprache]; {S} = Teilen-Symbol
 function installSteps(os, browser) {
+  const add = ['Auf „Hinzufügen“ tippen.', 'Нажмите «Добавить».'];
+  const menu = ['Auf das Menü ⋮ tippen.', 'Нажмите меню ⋮.'];
+  const ok = ['Bestätigen.', 'Подтвердите.'];
   const I = {
-    'ios-safari': ['Unten (iPhone) bzw. oben (iPad) auf das Teilen-Symbol ' + SHARE_ICON + ' tippen.', 'Nach unten scrollen und „Zum Home-Bildschirm“ wählen.', 'Oben rechts auf „Hinzufügen“ tippen.'],
-    'ios-chrome': ['Oben rechts in der Adresszeile auf das Teilen-Symbol ' + SHARE_ICON + ' tippen.', '„Zum Home-Bildschirm“ wählen (eventuell erst „Mehr“ antippen).', 'Auf „Hinzufügen“ tippen.'],
-    'ios-firefox': ['Unten rechts auf das Menü ☰ tippen.', '„Teilen“ wählen, dann „Zum Home-Bildschirm“.', 'Auf „Hinzufügen“ tippen.'],
-    'ios-edge': ['Unten auf das Menü ⋯ tippen, dann auf „Teilen“ ' + SHARE_ICON + '.', '„Zum Home-Bildschirm“ wählen.', 'Auf „Hinzufügen“ tippen.'],
-    'ios-other': ['Öffne diese Seite in Safari (Adresse kopieren und in Safari einfügen).', 'Dann Teilen ' + SHARE_ICON + ' → „Zum Home-Bildschirm“ → „Hinzufügen“.'],
-    'android-chrome': ['Oben rechts auf das Menü ⋮ tippen.', '„App installieren“ oder „Zum Startbildschirm hinzufügen“ wählen.', 'Mit „Installieren“ bestätigen.'],
-    'android-samsung': ['Unten rechts auf das Menü ☰ tippen.', '„Seite hinzufügen zu“ wählen, dann „Startbildschirm“.', 'Mit „Hinzufügen“ bestätigen.'],
-    'android-firefox': ['Auf das Menü ⋮ tippen.', '„Installieren“ bzw. „Zum Startbildschirm hinzufügen“ wählen.', 'Mit „Hinzufügen“ bestätigen.'],
-    'android-edge': ['Unten auf das Menü ⋯ tippen.', '„Zum Telefon hinzufügen“ bzw. „App installieren“ wählen.', 'Bestätigen.'],
-    'android-opera': ['Auf das Menü ⋮ tippen.', '„Zum Startbildschirm hinzufügen“ wählen.', 'Bestätigen.'],
-    'android-other': ['Öffne diese Seite am besten in Chrome.', 'Menü ⋮ → „App installieren“.'],
-    'inapp': ['Du hast die Seite aus einer App (z. B. Instagram oder WhatsApp) geöffnet. Von dort kann man nichts installieren.', 'Tippe oben rechts auf ⋯ bzw. ⋮ und wähle „Im Browser öffnen“.', 'Dann erscheint die passende Anleitung.'],
-    'desktop-chrome': ['Rechts in der Adresszeile auf das Installieren-Symbol (Bildschirm mit Pfeil) klicken.', '„Installieren“ bestätigen.', 'Noch praktischer: diese Seite am Handy öffnen.'],
-    'desktop-edge': ['Rechts in der Adresszeile auf „App verfügbar“ klicken.', '„Installieren“ bestätigen.'],
-    'desktop-safari': ['Im Menü „Ablage“ → „Zum Dock hinzufügen“ wählen.'],
-    'desktop-other': ['Am besten öffnest du die Seite auf deinem Smartphone: einbuergerung.micana.de']
+    'ios-safari': [['Unten (iPhone) bzw. oben (iPad) auf das Teilen-Symbol {S} tippen.', 'Нажмите значок «Поделиться» {S} внизу (iPhone) или вверху (iPad).'], ['Nach unten scrollen und „Zum Home-Bildschirm“ wählen.', 'Прокрутите вниз и выберите «На экран „Домой“».'], ['Oben rechts auf „Hinzufügen“ tippen.', 'Нажмите «Добавить» вверху справа.']],
+    'ios-chrome': [['Oben rechts in der Adresszeile auf das Teilen-Symbol {S} tippen.', 'Нажмите значок «Поделиться» {S} справа в адресной строке.'], ['„Zum Home-Bildschirm“ wählen (eventuell erst „Mehr“ antippen).', 'Выберите «На экран „Домой“» (возможно, сначала нажмите «Ещё»).'], add],
+    'ios-firefox': [['Unten rechts auf das Menü ☰ tippen.', 'Нажмите меню ☰ внизу справа.'], ['„Teilen“ wählen, dann „Zum Home-Bildschirm“.', 'Выберите «Поделиться», затем «На экран „Домой“».'], add],
+    'ios-edge': [['Unten auf das Menü ⋯ tippen, dann auf „Teilen“ {S}.', 'Нажмите меню ⋯ внизу, затем «Поделиться» {S}.'], ['„Zum Home-Bildschirm“ wählen.', 'Выберите «На экран „Домой“».'], add],
+    'ios-other': [['Öffne diese Seite in Safari (Adresse kopieren und in Safari einfügen).', 'Откройте эту страницу в Safari (скопируйте адрес и вставьте его в Safari).'], ['Dann Teilen {S} → „Zum Home-Bildschirm“ → „Hinzufügen“.', 'Затем «Поделиться» {S} → «На экран „Домой“» → «Добавить».']],
+    'android-chrome': [['Oben rechts auf das Menü ⋮ tippen.', 'Нажмите меню ⋮ вверху справа.'], ['„App installieren“ oder „Zum Startbildschirm hinzufügen“ wählen.', 'Выберите «Установить приложение» или «Добавить на главный экран».'], ['Mit „Installieren“ bestätigen.', 'Подтвердите кнопкой «Установить».']],
+    'android-samsung': [['Unten rechts auf das Menü ☰ tippen.', 'Нажмите меню ☰ внизу справа.'], ['„Seite hinzufügen zu“ wählen, dann „Startbildschirm“.', 'Выберите «Добавить страницу на», затем «Главный экран».'], ['Mit „Hinzufügen“ bestätigen.', 'Подтвердите кнопкой «Добавить».']],
+    'android-firefox': [menu, ['„Installieren“ bzw. „Zum Startbildschirm hinzufügen“ wählen.', 'Выберите «Установить» или «Добавить на главный экран».'], ['Mit „Hinzufügen“ bestätigen.', 'Подтвердите кнопкой «Добавить».']],
+    'android-edge': [['Unten auf das Menü ⋯ tippen.', 'Нажмите меню ⋯ внизу.'], ['„Zum Telefon hinzufügen“ bzw. „App installieren“ wählen.', 'Выберите «Добавить на телефон» или «Установить приложение».'], ok],
+    'android-opera': [menu, ['„Zum Startbildschirm hinzufügen“ wählen.', 'Выберите «Добавить на главный экран».'], ok],
+    'android-other': [['Öffne diese Seite am besten in Chrome.', 'Лучше откройте эту страницу в Chrome.'], ['Menü ⋮ → „App installieren“.', 'Меню ⋮ → «Установить приложение».']],
+    'inapp': [['Du hast die Seite aus einer App (z. B. WhatsApp oder Telegram) geöffnet. Von dort kann man nichts installieren.', 'Вы открыли страницу из приложения (например, WhatsApp или Telegram). Оттуда ничего установить нельзя.'], ['Tippe oben rechts auf ⋯ bzw. ⋮ und wähle „Im Browser öffnen“.', 'Нажмите ⋯ или ⋮ вверху справа и выберите «Открыть в браузере».'], ['Dann erscheint die passende Anleitung.', 'После этого появится подходящая инструкция.']],
+    'desktop-chrome': [['Rechts in der Adresszeile auf das Installieren-Symbol (Bildschirm mit Pfeil) klicken.', 'Нажмите значок установки (экран со стрелкой) справа в адресной строке.'], ['„Installieren“ bestätigen.', 'Подтвердите «Установить».'], ['Noch praktischer: diese Seite am Handy öffnen.', 'Ещё удобнее: откройте эту страницу на телефоне.']],
+    'desktop-edge': [['Rechts in der Adresszeile auf „App verfügbar“ klicken.', 'Нажмите «Доступно приложение» справа в адресной строке.'], ['„Installieren“ bestätigen.', 'Подтвердите «Установить».']],
+    'desktop-safari': [['Im Menü „Ablage“ → „Zum Dock hinzufügen“ wählen.', 'В меню «Файл» выберите «Добавить в Dock».']],
+    'desktop-other': [['Am besten öffnest du die Seite auf deinem Smartphone: einbuergerung.micana.de', 'Лучше всего откройте страницу на смартфоне: einbuergerung.micana.de']]
   };
   return I[browser === 'inapp' ? 'inapp' : `${os}-${browser}`] || I[`${os}-other`] || I['desktop-other'];
 }
+const withIcon = h => h.replace(/\{S\}/g, SHARE_ICON);
+const ruStep = r => { const x = tr(r); return x && hl() ? `<span class="ru" lang="${hl()}">${withIcon(esc(x))} ${say(x.replace(/\s*\{S\}/g, ''), 'hl')}</span>` : ''; };
+const stepList = steps => `<ol class="steps">${steps.map(([d, r]) => `<li>${withIcon(esc(d))}${ruStep(r)}</li>`).join('')}</ol>`;
 const OS_NAME = { ios: 'iPhone / iPad', android: 'Android', desktop: 'Computer' };
 const BR_NAME = { safari: 'Safari', chrome: 'Chrome', firefox: 'Firefox', edge: 'Edge', samsung: 'Samsung Internet', opera: 'Opera', inapp: 'In-App-Browser', other: 'Browser' };
 function installGuide(os, browser, compact) {
   return `<p class="small muted">Erkannt: ${OS_NAME[os]} · ${BR_NAME[browser]}</p>
     <button class="btn primary block" data-act="native-install" ${deferredPrompt ? '' : 'hidden'} style="margin-bottom:12px">Jetzt installieren</button>
-    <ol class="steps">${installSteps(os, browser).map(s => `<li>${s}</li>`).join('')}</ol>
-    ${compact ? '' : '<p class="small">Danach findest du „Einbürgerung“ als Symbol auf dem Startbildschirm. Die App startet ohne Adresszeile und funktioniert auch offline.</p>'}`;
+    ${stepList(installSteps(os, browser))}
+    ${compact ? '' : `<p class="small">Danach findest du „Einbürgerung“ als Symbol auf dem Startbildschirm. Die App startet ohne Adresszeile und funktioniert auch offline.${ru('После этого на главном экране появится значок «Einbürgerung». Приложение запускается без адресной строки и работает без интернета.')}</p>`}`;
 }
-async function nativeInstall() { if (!deferredPrompt) return; deferredPrompt.prompt(); const r = await deferredPrompt.userChoice; deferredPrompt = null; if (r.outcome === 'accepted') { S.installSeen = true; save(); closeSheet(); } }
+async function nativeInstall() { if (!deferredPrompt) return; deferredPrompt.prompt(); const r = await deferredPrompt.userChoice; deferredPrompt = null; if (r.outcome === 'accepted') { appInstalled = true; S.installSeen = true; save(); closeSheet(); if (document.getElementById('gate')) installGate(true); } }
 function installieren() {
   const p = platform();
   render(`<h1>Als App installieren</h1>${ru('Установить как приложение')}
     ${p.standalone ? '<div class="notice ok" style="margin-top:12px">Die App ist bereits installiert. 👍</div>' : ''}
     <div class="card" style="margin-top:14px"><h2>Dein Gerät</h2>${installGuide(p.os, p.browser)}</div>
     <h2>Andere Geräte</h2>
-    ${[['ios', 'safari'], ['ios', 'chrome'], ['android', 'chrome'], ['android', 'samsung'], ['android', 'firefox']].filter(([o, b]) => !(o === p.os && b === p.browser)).map(([o, b]) => `<details class="level"><summary><span>${OS_NAME[o]} · ${BR_NAME[b]}</span><span class="spacer"></span><span class="chev">›</span></summary><ol class="steps" style="margin-top:12px">${installSteps(o, b).map(s => `<li>${s}</li>`).join('')}</ol></details>`).join('')}`);
+    ${[['ios', 'safari'], ['ios', 'chrome'], ['android', 'chrome'], ['android', 'samsung'], ['android', 'firefox']].filter(([o, b]) => !(o === p.os && b === p.browser)).map(([o, b]) => `<details class="level"><summary><span>${OS_NAME[o]} · ${BR_NAME[b]}</span><span class="spacer"></span><span class="chev">›</span></summary><div style="margin-top:12px">${stepList(installSteps(o, b))}</div></details>`).join('')}`);
   $app.onclick = e => { if (e.target.closest('[data-act="native-install"]')) nativeInstall(); };
   cleanup = () => { $app.onclick = null; };
 }
 function closeSheet() { document.getElementById('sheet')?.remove(); }
-function maybeInstallSheet() {
+
+const GATE_KEY = 'eb.gateSkip', GATE_HOURS = 6;
+const gateSkipped = () => { try { return Date.now() - (+localStorage.getItem(GATE_KEY) || 0) < GATE_HOURS * 3600000; } catch { return false; } };
+// Prüft (Chrome/Android), ob die App schon installiert ist – dann soll man sie öffnen statt im Browser weiterzumachen
+async function detectInstalled() {
+  try { const apps = await navigator.getInstalledRelatedApps?.(); if (apps && apps.length) appInstalled = true; } catch {}
+  return appInstalled;
+}
+function installGate(force) {
   const p = platform();
+  const mobile = p.os !== 'desktop';
+  document.getElementById('nag')?.remove(); document.body.classList.remove('nagged');
+  if (p.standalone || EMBED) { document.getElementById('gate')?.remove(); return; }
+  if (!mobile) return desktopSheet(p);
+  if (!force && gateSkipped()) { document.getElementById('gate')?.remove(); return nag(p); }
+  const draw = () => {
+    let el = document.getElementById('gate');
+    if (!el) { el = document.createElement('div'); el.id = 'gate'; el.className = 'gate'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'gate-h'); document.body.appendChild(el); }
+    const H = hl() || 'de';
+    el.innerHTML = `<div class="gate-in">
+      <div class="gate-top"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="2" width="28" height="28" rx="8" fill="currentColor"/><path d="M10 16.5l4 4 8-9" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><b>Einbürgerung <small>Sachsen</small></b><span class="spacer"></span>
+        <div class="seg" role="group" aria-label="Sprache · Язык · Language">${['ru', 'en', 'de'].map(l => `<button data-glang="${l}" class="${H === l ? 'on' : ''}" lang="${l}">${l === 'de' ? 'Deutsch' : LANG[l].name}</button>`).join('')}</div></div>
+      ${appInstalled ? `<h1 id="gate-h">Die App ist installiert</h1>${ru('Приложение установлено')}
+        <div class="notice ok" style="margin-top:14px">Öffne sie jetzt über das Symbol „Einbürgerung“ auf deinem Startbildschirm. Dieses Browserfenster kannst du schließen.${ru('Откройте его через значок «Einbürgerung» на главном экране. Это окно браузера можно закрыть.')}</div>`
+      : `<h1 id="gate-h">Zuerst die App installieren</h1>${ru('Сначала установите приложение')}
+        <div class="card gate-card"><h2>So geht's</h2>${ru('Как это сделать')}<div style="margin-top:10px">${installGuide(p.os, p.browser, true)}</div>
+          ${p.browser === 'inapp' || p.browser === 'other' ? `<button class="btn small" data-act="copy-url" style="margin-top:4px">Adresse kopieren</button>` : ''}</div>
+        <ul class="gate-why">
+          <li><b>Immer auf dem Startbildschirm</b> – wie eine richtige App.${ru('Всегда на главном экране — как настоящее приложение.')}</li>
+          <li><b>Funktioniert ohne Internet</b> – auch unterwegs.${ru('Работает без интернета — и в дороге.')}</li>
+          <li><b>Dein Lernstand ist sicherer</b> – der Browser löscht ihn nicht so leicht.${ru('Ваш прогресс надёжнее сохранён — браузер не удалит его так просто.')}</li>
+        </ul>
+        ${p.os === 'ios' && p.browser !== 'inapp' ? `<div class="notice">Wichtig auf iPhone und iPad: Was du hier im Browser lernst, wird <b>nicht</b> in die installierte App übernommen. Installiere deshalb jetzt zuerst.${ru('Важно на iPhone и iPad: то, что вы учите здесь в браузере, не переносится в установленное приложение. Поэтому сначала установите его.')}</div>` : ''}`}
+      <button class="gate-skip" data-act="gate-skip">${appInstalled ? 'Trotzdem im Browser weiter' : 'Ohne Installation im Browser weiter'}${ru(appInstalled ? 'Всё равно продолжить в браузере' : 'Продолжить в браузере без установки')}</button>
+    </div>`;
+  };
+  draw();
+  document.body.classList.add('gated');
+  const el = document.getElementById('gate');
+  el.onclick = async e => {
+    const t = e.target;
+    if (t.closest('[data-act="native-install"]')) return nativeInstall();
+    const g = t.closest('[data-glang]');
+    if (g) { if (await setLang(g.dataset.glang)) { draw(); if (!S.onboarded) route(); } return; }
+    if (t.closest('[data-act="copy-url"]')) { try { await navigator.clipboard.writeText(APP_URL); toast('Adresse kopiert – im Browser einfügen'); } catch { toast(APP_URL); } return; }
+    if (t.closest('[data-act="gate-skip"]')) {
+      try { localStorage.setItem(GATE_KEY, String(Date.now())); } catch {}
+      el.remove(); document.body.classList.remove('gated'); nag(p); route();
+    }
+  };
+  if (!force && !appInstalled) detectInstalled().then(x => { if (x && document.getElementById('gate')) draw(); });
+  el.querySelector('h1')?.focus?.();
+}
+// Balken oben, solange die App im Browser läuft
+function nag(p) {
+  if (document.getElementById('nag')) return;
+  const el = document.createElement('button'); el.id = 'nag'; el.className = 'nag no-print';
+  const h = hl() ? tr('Приложение не установлено') : '';
+  el.innerHTML = `<span><b>App nicht installiert</b>${h ? `<span class="ru" lang="${hl()}">${esc(h)}</span>` : ''}</span><span class="go">Installieren ›</span>`;
+  el.onclick = () => installGate(true);
+  document.body.appendChild(el); document.body.classList.add('nagged');
+  document.documentElement.style.setProperty('--nag-h', el.offsetHeight + 'px');
+}
+// Computer: nur ein Hinweis, einmal
+function desktopSheet(p) {
   let later = false; try { later = !!sessionStorage.getItem('eb.sheetLater'); } catch {}
-  if (p.standalone || EMBED || S.installSeen || later) return;
+  if (S.installSeen || later || !S.onboarded || document.getElementById('sheet')) return;
   const el = document.createElement('div');
   el.id = 'sheet'; el.className = 'sheet-wrap'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'sheet-h');
-  el.innerHTML = `<div class="sheet"><h2 id="sheet-h">Als App speichern</h2><p class="small">So hast du die App immer auf dem Startbildschirm – auch ohne Internet.${ru('Так приложение всегда будет на главном экране — даже без интернета.')}</p>${installGuide(p.os, p.browser, true)}
+  el.innerHTML = `<div class="sheet"><h2 id="sheet-h">Als App speichern</h2><p class="small">So hast du die App immer griffbereit – auch ohne Internet. Am bequemsten lernst du am Handy.${ru('Так приложение всегда под рукой — даже без интернета. Удобнее всего учиться на телефоне.')}</p>${installGuide(p.os, p.browser, true)}
     <div class="row" style="margin-top:6px"><button class="btn ghost" data-sheet="later">Später</button><span class="spacer"></span><button class="btn primary" data-sheet="ok">Verstanden</button></div></div>`;
   document.body.appendChild(el);
   el.onclick = e => {
@@ -1478,6 +1599,100 @@ function maybeInstallSheet() {
     else if (a === 'later' || t === el) { try { sessionStorage.setItem('eb.sheetLater', '1'); } catch {} closeSheet(); }
   };
   el.querySelector('[data-sheet="ok"]').focus();
+}
+
+/* ---------- Sprache wählen ---------- */
+const LANG_OPTS = [
+  ['ru', 'Deutsch + Русский', 'Erklärungen zusätzlich auf Russisch', 'Пояснения дополнительно на русском'],
+  ['en', 'Deutsch + English', 'Erklärungen zusätzlich auf Englisch', 'Explanations also in English'],
+  ['de', 'Nur Deutsch', 'Alles nur auf Deutsch – gut für Fortgeschrittene', '']
+];
+function langChoice(first) {
+  const cur = S.lang || (first ? '' : 'ru');
+  return `<div class="langs" role="radiogroup" aria-label="Sprache">${LANG_OPTS.map(([k, t, d, n]) => `<button class="lang ${cur === k ? 'on' : ''}" data-lang="${k}" role="radio" aria-checked="${cur === k}"><span class="flag" aria-hidden="true">${k === 'de' ? 'DE' : 'DE+' + LANG[k].tag}</span><span><b>${t}</b><span class="small">${d}</span>${n ? `<span class="small" lang="${k}" style="color:var(--ru)">${n}</span>` : ''}</span><span class="tick" aria-hidden="true">${cur === k ? '✓' : ''}</span></button>`).join('')}</div>`;
+}
+function langToast() { return hl() ? `Sprache: Deutsch + ${hlName()}` : 'Sprache: Nur Deutsch'; }
+// Vorauswahl beim Erststart nach Gerätesprache
+function guessLang() { const l = (navigator.languages || [navigator.language || '']).map(x => String(x).slice(0, 2).toLowerCase()); for (const x of l) { if (x === 'ru' || x === 'uk' || x === 'be' || x === 'kk') return 'ru'; if (x === 'en') return 'en'; if (x === 'de') return ''; } return ''; }
+function sprache(mode) {
+  const first = mode === 'erst' && !S.onboarded;
+  if (first && !S.lang) { const g = guessLang(); if (g) { S.lang = g; if (g === 'en') loadEN().then(() => { if (location.hash.startsWith('#sprache')) sprache(mode); }); } }
+  render(`${first ? '' : back('#einstellungen', 'Einstellungen')}
+    ${first ? `<div class="welcome"><div class="eyebrow">Einbürgerung Sachsen</div><h1>Willkommen!</h1><p class="muted" style="margin:0"><span lang="ru">Добро пожаловать!</span> · <span lang="en">Welcome!</span></p></div>` : '<h1>Sprache</h1>'}
+    <p style="margin-top:14px"><b>Welche Sprache möchtest du zusätzlich zu Deutsch?</b><span class="small" style="display:block;color:var(--ru)"><span lang="ru">Какой язык добавить к немецкому?</span> · <span lang="en">Which language would you like alongside German?</span></span></p>
+    ${langChoice(first)}
+    <p class="small muted">Deutsch steht immer an erster Stelle. Du kannst die Sprache jederzeit unter <b>Einstellungen</b> ändern.${ru('Немецкий всегда на первом месте. Язык можно изменить в любое время в настройках.')}</p>
+    ${first ? `<div class="row end"><button class="btn primary" data-act="weiter" ${S.lang ? '' : 'disabled'}>Weiter ›</button></div>` : '<div class="row"><a class="btn" href="#tutorial">Einführung ansehen</a></div>'}`);
+  $app.onclick = async e => {
+    const b = e.target.closest('[data-lang]');
+    if (b) { if (await setLang(b.dataset.lang)) { if (!first) toast(langToast()); sprache(mode); } return; }
+    if (e.target.closest('[data-act="weiter"]') && S.lang) { await setLang(S.lang); location.hash = '#tutorial--erst'; }
+  };
+  cleanup = () => { $app.onclick = null; };
+}
+
+/* ---------- Einführung (Tutorial) ---------- */
+const NAV_SVG = id => document.querySelector(`.nav [data-nav="${id}"] svg`)?.outerHTML || '';
+function tutorialSlides() {
+  return [
+    { ico: '<svg viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="28" rx="8" fill="currentColor"/><path d="M10 16.5l4 4 8-9" stroke="var(--brand-ink)" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      t: ['Deine Lernhilfe für die Einbürgerung', 'Ваш помощник для получения гражданства'],
+      p: [['Hier lernst du alles für den Einbürgerungstest und die B1-Prüfung und findest Unterlagen und Behörden in Sachsen.', 'Здесь вы готовитесь к тесту на натурализацию и экзамену B1, а также найдёте документы и ведомства в Саксонии.'],
+          ['Kostenlos, ohne Anmeldung, funktioniert auch ohne Internet.', 'Бесплатно, без регистрации, работает и без интернета.']] },
+    { ico: NAV_SVG('start'), t: ['Start: dein Tag', 'Старт: ваш день'],
+      p: [['Der Ring zeigt dein Tagesziel. Darunter steht, was heute dran ist.', 'Кольцо показывает вашу цель на день. Ниже — что нужно сделать сегодня.'],
+          ['„Schritt für Schritt“ zeigt den ganzen Weg bis zur Urkunde.', '«Шаг за шагом» показывает весь путь до получения документа о гражданстве.']] },
+    { ico: NAV_SVG('test'), t: ['Test: lernen und üben', 'Тест: учить и тренироваться'],
+      p: [['„Lernen“ fragt dich klug ab: Fragen, die du falsch hattest, kommen öfter wieder.', '«Учить» спрашивает с умом: вопросы, на которые вы ответили неправильно, повторяются чаще.'],
+          ['„Prüfung simulieren“ ist wie der echte Test: 33 Fragen in 60 Minuten. Bestanden ab 17 richtigen.', '«Пробный экзамен» как настоящий тест: 33 вопроса за 60 минут. Сдан от 17 правильных ответов.']] },
+    { ico: `<svg viewBox="0 0 24 24">${SAY_ICON.replace(/^<svg[^>]*>|<\/svg>$/g, '')}</svg>`, t: ['Hilfen auf jeder Seite', 'Помощь на каждой странице'], demo: true,
+      p: [['Gepunktet unterstrichene Wörter antippen – dann kommt eine einfache Erklärung.', 'Нажмите на слово, подчёркнутое пунктиром, — появится простое объяснение.'],
+          ['Lautsprecher = vorlesen. Mikrofon = nachsprechen, die App prüft deine Aussprache.', 'Динамик — прочитать вслух. Микрофон — повторить, приложение проверит произношение.'],
+          ['Unten rechts kannst du die ganze Seite vorlesen lassen.', 'Внизу справа можно включить чтение всей страницы.']] },
+    { ico: NAV_SVG('kurs'), t: ['Deutsch: von A1 bis B1', 'Немецкий: от A1 до B1'],
+      p: [['30 Lektionen mit Grammatik, Wörtern, Dialogen und Übungen.', '30 уроков с грамматикой, словами, диалогами и упражнениями.'],
+          ['Dazu ein Vokabeltrainer und Aufgaben wie in der B1-Prüfung.', 'Плюс тренажёр слов и задания как на экзамене B1.']] },
+    { ico: NAV_SVG('docs'), t: ['Unterlagen und Behörden', 'Документы и ведомства'],
+      p: [['Hake ab, welche Unterlagen du schon hast. Finde deine Einbürgerungsbehörde über Ort oder Postleitzahl.', 'Отмечайте, какие документы уже есть. Найдите своё ведомство по городу или почтовому индексу.'],
+          ['Unter „Mehr“: Lernplan, Lebenslauf, Kosten, Ablaufdaten, Briefvorlagen und vieles mehr.', 'В разделе «Mehr» (Ещё): план обучения, автобиография, расходы, сроки документов, шаблоны писем и многое другое.']] },
+    { ico: NAV_SVG('profil'), t: ['Dein Fortschritt', 'Ваш прогресс'],
+      p: [['Alles wird automatisch gespeichert – nur auf diesem Gerät, ohne Konto.', 'Всё сохраняется автоматически — только на этом устройстве, без аккаунта.'],
+          ['Lade ab und zu unter „Einstellungen“ eine Sicherungsdatei herunter, z. B. für ein neues Handy. Mehrere Personen? Nutzt den Familienmodus.', 'Время от времени скачивайте файл резервной копии в настройках, например для нового телефона. Несколько человек? Используйте семейный режим.']] },
+    { ico: NAV_SVG('einstellungen'), t: ['Sprache und Einführung', 'Язык и введение'],
+      p: [['Die Sprache kannst du jederzeit unter „Einstellungen“ ändern – auch auf „Nur Deutsch“.', 'Язык можно изменить в любое время в настройках — в том числе на «Только немецкий».'],
+          ['Diese Einführung findest du dort und unter „Mehr“ wieder. Viel Erfolg!', 'Это введение можно снова открыть там и в разделе «Mehr». Удачи!']] }
+  ];
+}
+function tutorial(mode) {
+  const first = mode === 'erst' && !S.onboarded;
+  const slides = tutorialSlides();
+  let k = 0;
+  const finish = () => { S.onboarded = true; save(); document.body.classList.remove('onboarding'); location.hash = '#start'; if (first) setTimeout(() => installGate(), 400); };
+  const draw = () => {
+    const s = slides[k], last = k === slides.length - 1;
+    render(`<div class="tut">
+      <div class="row tut-head"><span class="eyebrow">Einführung · ${k + 1} / ${slides.length}</span><span class="spacer"></span>${last ? '' : `<button class="btn small ghost" data-act="skip">${first ? 'Überspringen' : 'Schließen'}</button>`}</div>
+      <div class="tut-ico" aria-hidden="true">${s.ico}</div>
+      <h1>${esc(s.t[0])} ${say(s.t[0])}</h1>${ru(s.t[1])}
+      ${s.p.map(([d, r]) => `<p>${esc(d)} ${say(d)}${ru(r)}</p>`).join('')}
+      ${s.demo ? `<div class="card tut-demo"><div class="small muted" style="margin-bottom:6px">Probier es aus:${ru('Попробуйте:')}</div><div class="q-text" style="font-size:1.05em">Was steht im ${gloss('Grundgesetz')}? ${say('Was steht im Grundgesetz?')} ${mic('Was steht im Grundgesetz?')}</div></div>` : ''}
+      <div class="dots" aria-hidden="true">${slides.map((_, i) => `<i class="${i === k ? 'on' : ''}"></i>`).join('')}</div>
+      <div class="row tut-nav">${k ? '<button class="btn" data-act="prev">‹ Zurück</button>' : `${first ? '<a class="btn ghost" href="#sprache--erst">‹ Sprache</a>' : ''}`}<span class="spacer"></span><button class="btn primary" data-act="${last ? 'done' : 'next'}">${last ? (first ? 'Los geht’s' : 'Fertig') : 'Weiter ›'}</button></div>
+    </div>`);
+    $app.querySelector('[data-act="next"],[data-act="done"]')?.focus({ preventScroll: true });
+  };
+  $app.onclick = e => {
+    const a = e.target.closest('[data-act]')?.dataset.act;
+    if (a === 'next') { k = Math.min(slides.length - 1, k + 1); stopSpeak(); draw(); window.scrollTo(0, 0); }
+    else if (a === 'prev') { k = Math.max(0, k - 1); stopSpeak(); draw(); window.scrollTo(0, 0); }
+    else if (a === 'skip' || a === 'done') finish();
+  };
+  // Wischen auf dem Handy
+  let x0 = null;
+  const ts = e => { x0 = e.touches[0].clientX; }, te = e => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 60) { k = Math.max(0, Math.min(slides.length - 1, k + (dx < 0 ? 1 : -1))); stopSpeak(); draw(); } };
+  $app.addEventListener('touchstart', ts, { passive: true }); $app.addEventListener('touchend', te);
+  cleanup = () => { $app.onclick = null; $app.removeEventListener('touchstart', ts); $app.removeEventListener('touchend', te); };
+  draw();
 }
 
 /* ---------- Start ---------- */
@@ -1498,7 +1713,7 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
 function showUpdate(worker) {
   if (document.getElementById('update')) return;
   const el = document.createElement('div'); el.id = 'update'; el.className = 'update no-print'; el.setAttribute('role', 'status');
-  el.innerHTML = `<div><b>Neue Version verfügbar</b><span class="ru" lang="ru">Доступна новая версия</span></div><button class="btn small primary" data-up>Jetzt laden</button>`;
+  el.innerHTML = `<div><b>Neue Version verfügbar</b>${ru('Доступна новая версия')}</div><button class="btn small primary" data-up>Jetzt laden</button>`;
   el.querySelector('[data-up]').onclick = () => { save(); worker.postMessage({ type: 'SKIP_WAITING' }); el.querySelector('[data-up]').textContent = 'Lädt …'; };
   document.body.appendChild(el);
 }

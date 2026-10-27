@@ -1,6 +1,6 @@
 # Einbürgerung Sachsen – Lern-App
 
-Kostenlose, offline-fähige Web-App (PWA) für Smartphone und Tablet, die auf die Einbürgerung in Sachsen vorbereitet. Alle Erklärungen sind zusätzlich auf Russisch verfügbar.
+Kostenlose, offline-fähige Web-App (PWA) für Smartphone und Tablet, die auf die Einbürgerung in Sachsen vorbereitet. Deutsch steht immer an erster Stelle; alle Erklärungen gibt es zusätzlich auf Russisch oder Englisch – oder man lernt „Nur Deutsch“.
 
 **Live:** https://einbuergerung.micana.de
 
@@ -12,14 +12,16 @@ Kostenlose, offline-fähige Web-App (PWA) für Smartphone und Tablet, die auf di
 - **Lebenslauf-Generator:** ausführlicher Lebenslauf als Fließtext mit Lückenprüfung
 - **Kostenrechner** für die ganze Familie
 - **Ablaufdaten:** Warnung, bevor Pass oder Aufenthaltstitel ablaufen, mit Kalendererinnerung
-- **Installationsanleitung** beim ersten Aufruf, passend zu Gerät und Browser
+- **Installation zuerst:** Auf Handy und Tablet erscheint im Browser eine Vollbild-Anleitung „Zuerst die App installieren“ (passend zu Gerät und Browser, mit Hinweis für WhatsApp-/Telegram-Browser). Weiter im Browser geht nur für 6 Stunden, danach kommt der Hinweis wieder; solange zeigt ein Balken oben „App nicht installiert“. Auf Android wird eine bereits installierte App erkannt („jetzt öffnen“).
+- **Erststart:** Sprachauswahl (Deutsch + Русский / Deutsch + English / Nur Deutsch), danach eine Einführung in 8 Schritten – zweisprachig in der gewählten Hilfssprache, mit Vorlese-Knöpfen
+- **Sprache und Einführung jederzeit:** unter Einstellungen, „Mehr“ und über 🌐 auf der Startseite
 - **Tagesziel und Lerntage am Stück**, Fortschritt als Stempel (A1 bis Urkunde)
 - **Themen-Statistik:** wo die meisten Fehler passieren, mit gezieltem Training
 - **Audio-Modus:** Fragen, Antworten und Erklärungen vorlesen lassen
-- **Wörterbuch zum Antippen:** schwierige Begriffe in den Testfragen mit russischer Erklärung
+- **Wörterbuch zum Antippen:** schwierige Begriffe in den Testfragen mit Erklärung (DE + RU/EN)
 - **Mitbring-Listen** für Test, B1-Prüfung, Behördentermin und Urkundenübergabe
 - **Familienmodus:** mehrere Profile, gemeinsame Unterlagenliste
-- **Vorlesen überall:** Seite auf Deutsch oder Russisch vorlesen, dazu Vorlese-Knöpfe an Fragen, Erklärungen und allen russischen Texten
+- **Vorlesen überall:** Seite auf Deutsch oder in der Hilfssprache vorlesen, dazu Vorlese-Knöpfe an Fragen, Erklärungen und allen Texten der Hilfssprache
 - **Aussprache üben:** Mikrofon-Knopf bei Beispielsätzen, Dialogen und Musterantworten (Chrome/Edge/Safari mit Spracherkennung)
 - **Gespräch bei der Behörde üben** mit Musterantworten und Erklärung des Bekenntnisses
 - **Mein erstes Mal wählen:** Wahlen in Sachsen erklärt, mit Quiz
@@ -45,6 +47,9 @@ Lokal starten: `python3 -m http.server` und `http://localhost:8000` öffnen.
 | `data/kurs-a1/a2/b1.json` | Deutschkurs |
 | `data/dtz.json` | B1-Prüfungsaufgaben (Hören, Lesen, Schreiben, Sprechen) |
 | `data/glossar.json` | Wörterbuch: Begriff, Wortformen (`f`), Erklärung DE/RU |
+| `data/en.json` | Englisch: ordnet jedem russischen Text (Daten und `app.js`) die englische Fassung zu |
+
+**Hilfssprache:** Texte in der Hilfssprache stehen in den Daten und im Code auf Russisch (`ru(...)`). Für Englisch schlägt die App den russischen Text in `data/en.json` nach. Wer einen russischen Text ändert oder neu anlegt, ergänzt dort die englische Fassung; `python3 tools/i18n-check.py` zeigt, was fehlt.
 
 **Weitere Bundesländer:** je Land eine Datei `data/behoerden-<kürzel>.json` im gleichen Schema anlegen und die 10 Landesfragen aus dem BAMF-Katalog ergänzen.
 

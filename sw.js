@@ -1,11 +1,11 @@
 // Service Worker: alles für die Offline-Nutzung vorhalten.
 // Bei jeder Inhaltsänderung CACHE hochzählen, damit Geräte die neue Version laden.
-const CACHE = 'eb-v1.3.0';
+const CACHE = 'eb-v1.4.0';
 const ASSETS = [
   './', 'index.html', 'app.css', 'app.js', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png',
   'data/questions.json', 'data/info.json', 'data/behoerden-sn.json',
-  'data/kurs-a1.json', 'data/kurs-a2.json', 'data/kurs-b1.json', 'data/dtz.json', 'data/glossar.json', 'fonts/Lora-Variable.ttf',
+  'data/kurs-a1.json', 'data/kurs-a2.json', 'data/kurs-b1.json', 'data/dtz.json', 'data/glossar.json', 'data/en.json', 'fonts/Lora-Variable.ttf',
   'icons/qr.svg', 'img/aufgabe_21.webp', 'img/aufgabe_55.webp', 'img/aufgabe_130.webp', 'img/aufgabe_176.webp',
   'img/aufgabe_187.webp', 'img/aufgabe_226.webp', 'img/sachsen_1.webp', 'img/sachsen_8.webp'
 ];
