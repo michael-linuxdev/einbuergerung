@@ -1,4 +1,4 @@
-/* Design „Urkunde“: amtlich-vertrauenswürdig – Sicherheitsdruck, Stempel, Formularfelder.
+/* Design „Urkunde“: seriös-vertrauenswürdig (bewusst ohne Behörden-Optik) – Linienmuster, Stempel, Formularfelder.
    Lora (Serif) für Überschriften und Zahlen, Systemschrift für Text, Monospace für Feldbeschriftungen. */
 @font-face{font-family:"Lora";src:url("fonts/Lora-Variable.ttf") format("truetype");font-weight:400 700;font-display:swap}
 :root{
@@ -93,7 +93,7 @@ main{flex:1;min-width:0;padding:20px max(16px,env(safe-area-inset-right)) calc(v
 
 /* Akte mit Stempeln */
 .doc{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 16px 14px;position:relative;margin-bottom:14px}
-.doc::before{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:linear-gradient(90deg,transparent 0 33.3%,var(--brand) 33.3% 66.6%,transparent 66.6%);border-bottom:1px solid var(--line)}
+.doc::before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:var(--gold);border-radius:var(--radius) var(--radius) 0 0}
 .field{display:flex;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:.62em;color:var(--ink-2);text-transform:uppercase;letter-spacing:.1em}
 .count{font-family:var(--serif);font-size:2.6em;font-weight:600;color:var(--brand);line-height:1;margin-top:6px;font-variant-numeric:lining-nums}
 .count small{font-size:.38em;color:var(--ink-2);font-weight:400}

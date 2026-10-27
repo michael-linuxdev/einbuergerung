@@ -1,5 +1,5 @@
 // Einbürgerung Sachsen – Lern-App (PWA). Vanilla JS, keine Abhängigkeiten.
-const VERSION = '1.2.0';
+const VERSION = '1.2.1';
 const $app = document.getElementById('app');
 const DAY = 86400000;
 
@@ -647,6 +647,7 @@ function amtCard(b, full = true) {
 function amt() {
   const mine = S.amt && D.amt.behoerden.find(b => b.id === S.amt);
   render(`<h1>Behörden & Kontakte</h1>
+    <div class="notice">Diese App ist eine private Lernhilfe und keine Behörde. Anträge stellst du direkt bei der zuständigen Stelle.</div>
     <p class="muted">${esc(D.amt.regel)}${ru('В Хемнице, Дрездене и Лейпциге отвечает городская администрация, во всех остальных местах — районная администрация (Landratsamt).')}</p>
     <label class="lbl" for="ort">Wohnort oder Postleitzahl</label>
     <input class="text" id="ort" type="search" placeholder="z. B. Freital, Pirna oder 01705" autocomplete="address-level2">
@@ -742,8 +743,9 @@ function start() {
   const backupDue = !EMBED && Object.keys(S.daily).length >= 3 && (!S.lastExport || Date.now() - S.lastExport > 30 * DAY);
   render(`
     <div class="hero">
-      <div class="row"><span class="eyebrow">Freistaat Sachsen · Ihr Verfahren</span><span class="spacer"></span>${st ? `<span class="streak" title="Lerntage am Stück">🔥 ${st} ${st === 1 ? 'Tag' : 'Tage'}</span>` : ''}</div>
+      <div class="row"><span class="eyebrow">Deine Lernhilfe · Einbürgerung in Sachsen</span><span class="spacer"></span>${st ? `<span class="streak" title="Lerntage am Stück">🔥 ${st} ${st === 1 ? 'Tag' : 'Tage'}</span>` : ''}</div>
       <h1>${g}${name ? ', ' + esc(name) : ''}.</h1>${ru(gru + (name ? ', ' + name : '') + '.')}
+      <p class="small muted" style="margin:8px 0 0">Private, kostenlose Lernhilfe – kein Angebot einer Behörde.${ru('Частная бесплатная помощь в обучении — не сервис ведомства.')}</p>
       <div style="margin-top:10px"><a class="who" href="#profil">👤 ${P.list.length > 1 ? `${esc(name || 'Profil')} wechseln` : 'Familienmodus'}</a></div>
     </div>
     <div class="doc">
