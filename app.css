@@ -16,7 +16,7 @@
     --ink:#e8ede9; --ink-2:#b5bfb9; --ink-3:#8a958f;
     --brand:#5fb894; --brand-ink:#0b1210; --brand-soft:#1d3a2f;
     --ok:#5cc28c; --ok-soft:#173528; --bad:#ec7b6f; --bad-soft:#3d1f1c; --warn:#e2b54a; --warn-soft:#3a3016;
-    --ru:#a9aee0; --shadow:none;
+    --ru:#a9aee0; --shadow:none; color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
@@ -24,7 +24,7 @@
   --ink:#e8ede9; --ink-2:#b5bfb9; --ink-3:#8a958f;
   --brand:#5fb894; --brand-ink:#0b1210; --brand-soft:#1d3a2f;
   --ok:#5cc28c; --ok-soft:#173528; --bad:#ec7b6f; --bad-soft:#3d1f1c; --warn:#e2b54a; --warn-soft:#3a3016;
-  --ru:#a9aee0; --shadow:none;
+  --ru:#a9aee0; --shadow:none; color-scheme:dark;
 }
 :root[data-size="l"]{--fs:19px}
 :root[data-size="xl"]{--fs:21px}

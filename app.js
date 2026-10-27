@@ -39,11 +39,13 @@ const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
 const bar = p => `<div class="progress" role="progressbar" aria-valuenow="${p}" aria-valuemin="0" aria-valuemax="100"><i style="width:${p}%"></i></div>`;
 const back = (href, label = 'Zurück') => `<a class="back no-print" href="${href}">‹ ${label}</a>`;
 const ABC = ['A', 'B', 'C', 'D'];
+const EMBED = (() => { try { return window.self !== window.top; } catch { return true; } })(); // in eingebetteter Vorschau kein Drucken/Download
 function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2200); }
 function applyPrefs() {
   document.body.classList.toggle('no-ru', !S.ru);
   const r = document.documentElement;
-  if (S.theme === 'auto') r.removeAttribute('data-theme'); else r.dataset.theme = S.theme;
+  if (S.theme !== 'auto') { r.dataset.theme = S.theme; applyPrefs.set = true; }
+  else if (applyPrefs.set) { r.removeAttribute('data-theme'); applyPrefs.set = false; }
   r.dataset.size = S.size;
 }
 const speakIcon = '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11"/></svg>';
@@ -74,7 +76,7 @@ let cleanup = null;
 function route() {
   if (cleanup) { cleanup(); cleanup = null; }
   if ('speechSynthesis' in window) speechSynthesis.cancel();
-  const parts = (location.hash.replace(/^#\/?/, '') || 'start').split('/');
+  const parts = (decodeURIComponent(location.hash).replace(/^#\/?/, '') || 'start').split(/--|\//);
   const [p, a, b] = parts;
   document.querySelectorAll('[data-nav]').forEach(n => n.classList.toggle('active', n.dataset.nav === p || (p === 'lernen' && n.dataset.nav === 'test') || (['pruefung', 'katalog'].includes(p) && n.dataset.nav === 'test') || (p === 'lektion' && n.dataset.nav === 'kurs')));
   const views = { start, test, lernen, pruefung, katalog, kurs, lektion, vokabeln, dtz, docs, amt, check, briefe, einstellungen, mehr };
@@ -114,14 +116,14 @@ function start() {
     <h1>Dein Weg zur Einbürgerung</h1>
     <p class="muted">Freistaat Sachsen · alles kostenlos und offline nutzbar${ru('Свободное государство Саксония · всё бесплатно и доступно офлайн')}</p>
     <div class="grid three">
-      <a class="tile" href="#/test"><div class="meta">Einbürgerungstest</div><div class="stat">${qL}<span class="small muted"> / 310</span></div>${bar(pct(qL, 310))}<div class="meta" style="margin-top:6px">${due ? `${due} Fragen fällig` : 'Fragen gelernt'}${best !== null ? ` · Bestwert ${best}/33` : ''}</div></a>
-      <a class="tile" href="#/kurs"><div class="meta">Deutschkurs A1–B1</div><div class="stat">${kD}<span class="small muted"> / ${D.kurs.length}</span></div>${bar(pct(kD, D.kurs.length))}<div class="meta" style="margin-top:6px">${next ? 'Weiter: ' + esc(next.id.toUpperCase().replace('-', '.')) + ' ' + esc(next.t) : 'Alle Lektionen fertig!'}</div></a>
-      <a class="tile" href="#/docs"><div class="meta">Unterlagen</div><div class="stat">${dD}<span class="small muted"> / ${docsItems.length}</span></div>${bar(pct(dD, docsItems.length))}<div class="meta" style="margin-top:6px">abgehakt</div></a>
+      <a class="tile" href="#test"><div class="meta">Einbürgerungstest</div><div class="stat">${qL}<span class="small muted"> / 310</span></div>${bar(pct(qL, 310))}<div class="meta" style="margin-top:6px">${due ? `${due} Fragen fällig` : 'Fragen gelernt'}${best !== null ? ` · Bestwert ${best}/33` : ''}</div></a>
+      <a class="tile" href="#kurs"><div class="meta">Deutschkurs A1–B1</div><div class="stat">${kD}<span class="small muted"> / ${D.kurs.length}</span></div>${bar(pct(kD, D.kurs.length))}<div class="meta" style="margin-top:6px">${next ? 'Weiter: ' + esc(next.id.toUpperCase().replace('-', '.')) + ' ' + esc(next.t) : 'Alle Lektionen fertig!'}</div></a>
+      <a class="tile" href="#docs"><div class="meta">Unterlagen</div><div class="stat">${dD}<span class="small muted"> / ${docsItems.length}</span></div>${bar(pct(dD, docsItems.length))}<div class="meta" style="margin-top:6px">abgehakt</div></a>
     </div>
-    ${frist ? `<div class="card flat" style="margin-top:14px"><b>Aufenthaltsdauer:</b> ${frist}</div>` : `<a class="card flat" style="display:block;margin-top:14px;text-decoration:none;color:inherit" href="#/check"><b>Wann darfst du den Antrag stellen?</b> Datum eingeben im Voraussetzungs-Check ›${ru('Когда можно подавать заявление? Введите дату в проверке условий')}</a>`}
+    ${frist ? `<div class="card flat" style="margin-top:14px"><b>Aufenthaltsdauer:</b> ${frist}</div>` : `<a class="card flat" style="display:block;margin-top:14px;text-decoration:none;color:inherit" href="#check"><b>Wann darfst du den Antrag stellen?</b> Datum eingeben im Voraussetzungs-Check ›${ru('Когда можно подавать заявление? Введите дату в проверке условий')}</a>`}
     <h2 style="margin-top:22px">Schritt für Schritt</h2>
     <div class="card"><ol class="steps">
-      ${D.info.steps.map(s => `<li class="${stepDone(s.id) ? 'done' : ''}"><b>${esc(s.t)}</b>${ru(s.ru)}<div class="small" style="margin-top:4px">${esc(s.d)}</div>${ru(s.dru)}${s.go ? `<a class="btn small" style="margin-top:8px" href="#/${s.go}">Öffnen</a>` : ''}</li>`).join('')}
+      ${D.info.steps.map(s => `<li class="${stepDone(s.id) ? 'done' : ''}"><b>${esc(s.t)}</b>${ru(s.ru)}<div class="small" style="margin-top:4px">${esc(s.d)}</div>${ru(s.dru)}${s.go ? `<a class="btn small" style="margin-top:8px" href="#${s.go}">Öffnen</a>` : ''}</li>`).join('')}
     </ol></div>
     <p class="small muted">Inhalte: Stand ${esc(D.info.stand)}. Keine Rechtsberatung – verbindlich ist die Auskunft deiner Einbürgerungsbehörde.</p>
   `);
@@ -134,7 +136,7 @@ function mehr() {
        ['dtz', 'B1-Prüfung (DTZ)', 'Экзамен B1 (DTZ)', 'Schreiben und Sprechen üben, Musterbriefe'],
        ['briefe', 'Briefvorlagen', 'Шаблоны писем', 'An die Behörde schreiben – zum Kopieren'],
        ['einstellungen', 'Einstellungen & Infos', 'Настройки и информация', 'Russisch, Schriftgröße, Sicherung, Quellen']]
-      .map(([h, t, r, d]) => `<a class="tile" href="#/${h}"><h3>${t}</h3>${ru(r)}<div class="meta">${d}</div><span class="arrow">›</span></a>`).join('')}
+      .map(([h, t, r, d]) => `<a class="tile" href="#${h}"><h3>${t}</h3>${ru(r)}<div class="meta">${d}</div><span class="arrow">›</span></a>`).join('')}
   </div>`);
 }
 
@@ -152,11 +154,11 @@ function test() {
     <p class="muted">33 Fragen in 60 Minuten: 30 aus 300 allgemeinen + 3 aus 10 Sachsen-Fragen. Bestanden ab 17 richtigen. Gebühr 25 € bei der Volkshochschule.${ru('33 вопроса за 60 минут: 30 из 300 общих + 3 из 10 вопросов по Саксонии. Сдан от 17 правильных ответов. Сбор 25 € в народном университете (VHS).')}</p>
     <div class="card"><div class="row"><div><div class="stat">${L} / 310</div><div class="muted small">sicher gelernt (Stufe 4+)</div></div><div class="spacer"></div><span class="badge brand">${due} fällig</span><span class="badge">${neu} neu</span></div><div style="margin-top:10px">${bar(pct(L, 310))}</div></div>
     <div class="grid two">
-      <a class="tile" href="#/lernen"><h3>Lernen</h3>${ru('Учить')}<div class="meta">Bis zu 20 Fragen: erst fällige Wiederholungen, dann neue. Falsche kommen wieder.</div><span class="arrow">›</span></a>
-      <a class="tile" href="#/pruefung"><h3>Prüfung simulieren</h3>${ru('Пробный экзамен')}<div class="meta">Wie im echten Test: 33 Fragen, 60 Minuten, Auswertung am Ende.</div><span class="arrow">›</span></a>
-      <a class="tile" href="#/lernen/sachsen"><h3>Nur Sachsen-Fragen</h3>${ru('Только вопросы по Саксонии')}<div class="meta">Die 10 Landesfragen gezielt üben.</div><span class="arrow">›</span></a>
-      <a class="tile" href="#/lernen/fehler"><h3>Meine Fehler</h3>${ru('Мои ошибки')}<div class="meta">${wrong} Fragen zuletzt falsch beantwortet.</div><span class="arrow">›</span></a>
-      <a class="tile" href="#/katalog"><h3>Alle 310 Fragen</h3>${ru('Все 310 вопросов')}<div class="meta">Katalog mit Lösungen, Suche und Themenfilter.</div><span class="arrow">›</span></a>
+      <a class="tile" href="#lernen"><h3>Lernen</h3>${ru('Учить')}<div class="meta">Bis zu 20 Fragen: erst fällige Wiederholungen, dann neue. Falsche kommen wieder.</div><span class="arrow">›</span></a>
+      <a class="tile" href="#pruefung"><h3>Prüfung simulieren</h3>${ru('Пробный экзамен')}<div class="meta">Wie im echten Test: 33 Fragen, 60 Minuten, Auswertung am Ende.</div><span class="arrow">›</span></a>
+      <a class="tile" href="#lernen--sachsen"><h3>Nur Sachsen-Fragen</h3>${ru('Только вопросы по Саксонии')}<div class="meta">Die 10 Landesfragen gezielt üben.</div><span class="arrow">›</span></a>
+      <a class="tile" href="#lernen--fehler"><h3>Meine Fehler</h3>${ru('Мои ошибки')}<div class="meta">${wrong} Fragen zuletzt falsch beantwortet.</div><span class="arrow">›</span></a>
+      <a class="tile" href="#katalog"><h3>Alle 310 Fragen</h3>${ru('Все 310 вопросов')}<div class="meta">Katalog mit Lösungen, Suche und Themenfilter.</div><span class="arrow">›</span></a>
     </div>
     ${last.length ? `<h2 style="margin-top:20px">Letzte Simulationen</h2><div class="card"><ul class="list">${last.map(e => `<li class="row"><span>${fmtDate(e.date)}</span><span class="spacer"></span><b>${e.score}/${e.total}</b> <span class="badge ${e.score >= 17 ? 'ok' : 'bad'}">${e.score >= 17 ? 'bestanden' : 'nicht bestanden'}</span></li>`).join('')}</ul></div>` : ''}
   `);
@@ -190,13 +192,13 @@ function lernen(filter) {
     if (!pool.length) pool = shuffle(D.q.filter(q => (S.srs[q.id]?.l || 0) < 5)).slice(0, 20);
     if (!pool.length) pool = shuffle(D.q).slice(0, 20);
   }
-  if (!pool.length) { render(`${back('#/test')}<div class="card"><h2>Keine Fragen in dieser Auswahl</h2><p>Super – hier gibt es gerade nichts zu wiederholen.</p></div>`); return; }
+  if (!pool.length) { render(`${back('#test')}<div class="card"><h2>Keine Fragen in dieser Auswahl</h2><p>Super – hier gibt es gerade nichts zu wiederholen.</p></div>`); return; }
   let queue = pool.slice(), i = 0, right = 0, answered = 0;
   const first = {};
   function show(sel = null) {
     const q = queue[i];
     const revealed = sel !== null;
-    render(`${back('#/test', 'Test')}
+    render(`${back('#test', 'Test')}
       <div class="row" style="margin-bottom:10px"><div style="flex:1">${bar(pct(i, queue.length))}</div><span class="small muted">${i + 1}/${queue.length}</span></div>
       ${qCard(q, { sel, reveal: revealed, mode: 'learn' })}
       ${revealed ? `<div class="feedback ${sel === q.a ? 'ok' : 'bad'}">${sel === q.a ? 'Richtig!' : 'Leider falsch. Richtig ist ' + ABC[q.a] + '.'}${ru(sel === q.a ? 'Правильно!' : 'К сожалению, неверно. Правильный ответ: ' + ABC[q.a] + '.')}</div>
@@ -213,8 +215,8 @@ function lernen(filter) {
     } else if (t.dataset.act === 'next') {
       i++;
       if (i >= queue.length) {
-        render(`${back('#/test', 'Test')}<div class="card"><h2>Runde geschafft!</h2>${ru('Раунд пройден!')}<p class="stat">${right} / ${answered}</p><p class="muted">beim ersten Versuch richtig</p>
-          <div class="row"><a class="btn primary" href="#/lernen${filter ? '/' + filter : ''}" data-act="again">Noch eine Runde</a><a class="btn" href="#/test">Übersicht</a></div></div>`);
+        render(`${back('#test', 'Test')}<div class="card"><h2>Runde geschafft!</h2>${ru('Раунд пройден!')}<p class="stat">${right} / ${answered}</p><p class="muted">beim ersten Versuch richtig</p>
+          <div class="row"><a class="btn primary" href="#lernen${filter ? '--' + filter : ''}" data-act="again">Noch eine Runde</a><a class="btn" href="#test">Übersicht</a></div></div>`);
         $app.onclick = e2 => { if (e2.target.closest('[data-act="again"]')) { e2.preventDefault(); lernen(filter); } };
       } else show();
     } else if (t.dataset.act === 'speak') speak(t.dataset.t);
@@ -238,7 +240,7 @@ function pruefung() {
   function show() {
     render(`
       <div class="exam-bar">
-        <div class="row"><a class="back" href="#/test" style="margin:0">‹ Abbrechen</a><span class="spacer"></span><span class="badge brand">⏱ <span id="timer">60:00</span></span><span class="badge">${ans.filter(a => a !== null).length}/33 beantwortet</span></div>
+        <div class="row"><a class="back" href="#test" style="margin:0">‹ Abbrechen</a><span class="spacer"></span><span class="badge brand">⏱ <span id="timer">60:00</span></span><span class="badge">${ans.filter(a => a !== null).length}/33 beantwortet</span></div>
         <div class="dots">${qs.map((_, k) => `<button data-act="jump" data-i="${k}" class="${ans[k] !== null ? 'done' : ''} ${k === i ? 'cur' : ''}" aria-label="Frage ${k + 1}">${k + 1}</button>`).join('')}</div>
       </div>
       ${qCard(qs[i], { idx: i, total: 33, sel: ans[i], mode: 'exam' })}
@@ -256,7 +258,7 @@ function pruefung() {
       <div class="card" style="text-align:center"><div class="stat" style="font-size:3em">${score}/33</div>
         <p><span class="badge ${ok ? 'ok' : 'bad'}" style="font-size:1em">${ok ? 'Bestanden' : 'Nicht bestanden'}</span></p>
         <p class="muted">${ok ? (score >= 25 ? 'Sehr sicher – so kannst du dich anmelden.' : 'Bestanden, aber übe weiter, bis du sicher über 25 liegst.') : 'Mindestens 17 richtige Antworten sind nötig. Übe deine Fehler!'}</p>
-        <div class="row" style="justify-content:center"><a class="btn primary" href="#/lernen/fehler">Fehler üben</a><button class="btn" data-act="again">Neue Simulation</button></div></div>
+        <div class="row" style="justify-content:center"><a class="btn primary" href="#lernen--fehler">Fehler üben</a><button class="btn" data-act="again">Neue Simulation</button></div></div>
       <h2>Auswertung</h2>
       ${qs.map((q, k) => `<details class="card flat"><summary><b>${k + 1}.</b> ${ans[k] === q.a ? '<span class="badge ok">richtig</span>' : '<span class="badge bad">' + (ans[k] === null ? 'leer' : 'falsch') + '</span>'} ${esc(q.q)}</summary><div style="margin-top:10px">${qCard(q, { sel: ans[k], reveal: true, mode: 'x' })}</div></details>`).join('')}`);
   }
@@ -270,7 +272,7 @@ function pruefung() {
     else if (a === 'fwd') { i++; show(); }
     else if (a === 'finish') {
       const open = ans.filter(x => x === null).length;
-      if (!open || confirm(`${open} Fragen sind noch offen. Trotzdem abgeben?`)) finish();
+      if (!open || t.dataset.sure) finish(); else { t.textContent = `${open} offen – trotzdem abgeben?`; t.dataset.sure = '1'; t.classList.add('primary'); }
     }
   };
   cleanup = () => { clearInterval(timer); $app.onclick = null; };
@@ -293,7 +295,7 @@ function katalog() {
         <div class="small"><b style="color:var(--ok)">✓ ${esc(q.o[q.a])}</b>${q.ruo ? ru(q.ruo[q.a]) : ''}</div></div>`).join('') || '<p class="muted">Keine Treffer.</p>';
     document.getElementById('cnt').textContent = `${items.length} Fragen`;
   }
-  render(`${back('#/test', 'Test')}<h1>Fragenkatalog</h1>
+  render(`${back('#test', 'Test')}<h1>Fragenkatalog</h1>
     <input class="text" type="search" id="such" placeholder="Suchen (Wort oder Nummer) …" aria-label="Fragen durchsuchen" style="margin-bottom:10px">
     <div class="chips">${topics.map(x => `<button class="chip ${x === topic ? 'on' : ''}" data-topic="${esc(x)}">${esc(x)}</button>`).join('')}</div>
     <p class="small muted" id="cnt"></p><div id="kat"></div>
@@ -311,15 +313,15 @@ function kurs() {
   render(`<h1>Deutschkurs A1 – B1</h1>
     <p class="muted">30 Lektionen mit Grammatik, Wortschatz (mit Sprachausgabe), Dialogen und Übungen – alle Erklärungen auch auf Russisch. Ziel: das B1-Zertifikat für die Einbürgerung.${ru('30 уроков с грамматикой, словами (с озвучкой), диалогами и упражнениями — все объяснения также на русском. Цель: сертификат B1 для натурализации.')}</p>
     <div class="grid two" style="margin-bottom:8px">
-      <a class="tile" href="#/vokabeln"><h3>Vokabeltrainer</h3><div class="meta">${D.vok.length} Wörter · ${vokDue} heute fällig</div><span class="arrow">›</span></a>
-      <a class="tile" href="#/dtz"><h3>B1-Prüfung (DTZ) üben</h3><div class="meta">Schreiben & Sprechen mit Mustern</div><span class="arrow">›</span></a>
+      <a class="tile" href="#vokabeln"><h3>Vokabeltrainer</h3><div class="meta">${D.vok.length} Wörter · ${vokDue} heute fällig</div><span class="arrow">›</span></a>
+      <a class="tile" href="#dtz"><h3>B1-Prüfung (DTZ) üben</h3><div class="meta">Schreiben & Sprechen mit Mustern</div><span class="arrow">›</span></a>
     </div>
     ${lvls.map(lv => {
       const ls = D.kurs.filter(l => l.lv === lv); const d = ls.filter(l => S.kurs[l.id]?.done).length;
       return `<h2 style="margin-top:20px">Niveau ${lv} <span class="badge">${d}/${ls.length}</span></h2>
       <div class="grid two">${ls.map((l, k) => {
         const st = S.kurs[l.id];
-        return `<a class="tile" href="#/lektion/${l.id}"><div class="meta">${lv}.${k + 1}</div><h3>${esc(l.t)}</h3>${ru(l.ru)}<div class="meta" style="margin-top:6px">${st?.done ? `<span class="badge ok">✓ geschafft · ${st.best}%</span>` : st ? `<span class="badge warn">${st.best}% – nochmal üben</span>` : esc(l.gr.t)}</div></a>`;
+        return `<a class="tile" href="#lektion--${l.id}"><div class="meta">${lv}.${k + 1}</div><h3>${esc(l.t)}</h3>${ru(l.ru)}<div class="meta" style="margin-top:6px">${st?.done ? `<span class="badge ok">✓ geschafft · ${st.best}%</span>` : st ? `<span class="badge warn">${st.best}% – nochmal üben</span>` : esc(l.gr.t)}</div></a>`;
       }).join('')}</div>`;
     }).join('')}`);
 }
@@ -331,18 +333,18 @@ function lektion(id, tab = 'gr') {
   let body = '';
   if (tab === 'gr') body = `<div class="card"><h2>${esc(l.gr.t)}</h2>${ru(l.gr.ru)}<p style="margin-top:12px">${esc(l.gr.de)}</p><p class="ru" lang="ru">${esc(l.gr.rde)}</p>
       <h3 style="margin-top:16px">Beispiele</h3><ul class="list">${l.gr.ex.map(e => `<li class="vok"><div>${esc(e[0])}${ru(e[1])}</div>${speakBtn(e[0])}</li>`).join('')}</ul></div>
-      <div class="row end"><a class="btn primary" href="#/lektion/${id}/vok">Weiter: Wörter ›</a></div>`;
+      <div class="row end"><a class="btn primary" href="#lektion--${id}--vok">Weiter: Wörter ›</a></div>`;
   if (tab === 'vok') body = `<div class="card"><ul class="list">${l.vok.map(v => `<li class="vok"><div><b>${esc(v[0])}</b>${ru(v[1])}</div>${speakBtn(v[0])}</li>`).join('')}</ul></div>
-      <div class="row end"><a class="btn" href="#/vokabeln/${id}">Als Karteikarten üben</a><a class="btn primary" href="#/lektion/${id}/dia">Weiter: Dialog ›</a></div>`;
+      <div class="row end"><a class="btn" href="#vokabeln--${id}">Als Karteikarten üben</a><a class="btn primary" href="#lektion--${id}--dia">Weiter: Dialog ›</a></div>`;
   if (tab === 'dia') body = `<div class="card dia"><div class="row" style="margin-bottom:12px"><button class="btn small" data-act="speakall">${speakIcon.replace('<svg', '<svg width="18" height="18" style="fill:none;stroke:currentColor;stroke-width:2"')} Ganzen Dialog anhören</button></div>
       ${l.dia.map(d => `<div class="vok" style="margin-bottom:12px"><p><b>${esc(d[0])}:</b> ${esc(d[1])}${ru(d[2])}</p>${speakBtn(d[1])}</div>`).join('')}</div>
-      <div class="row end"><a class="btn primary" href="#/lektion/${id}/ue">Weiter: Übungen ›</a></div>`;
+      <div class="row end"><a class="btn primary" href="#lektion--${id}--ue">Weiter: Übungen ›</a></div>`;
   if (tab === 'ue') body = `<div id="ue"></div>`;
-  render(`${back('#/kurs', 'Kurs')}<div class="muted small">${l.lv} · Lektion ${idx + 1} von ${D.kurs.length}</div><h1>${esc(l.t)}</h1>${ru(l.ru)}
+  render(`${back('#kurs', 'Kurs')}<div class="muted small">${l.lv} · Lektion ${idx + 1} von ${D.kurs.length}</div><h1>${esc(l.t)}</h1>${ru(l.ru)}
     <div class="tabs" style="margin-top:14px" role="tablist">${tabs.map(([k, n]) => `<button class="${k === tab ? 'on' : ''}" data-tab="${k}" role="tab" aria-selected="${k === tab}">${n}</button>`).join('')}</div>${body}`);
   $app.onclick = e => {
     const t = e.target.closest('[data-tab],[data-act]'); if (!t) return;
-    if (t.dataset.tab) location.hash = `#/lektion/${id}/${t.dataset.tab}`;
+    if (t.dataset.tab) location.hash = `#lektion--${id}--${t.dataset.tab}`;
     else if (t.dataset.act === 'speak') speak(t.dataset.t);
     else if (t.dataset.act === 'speakall') speak(l.dia.map(d => d[1]).join(' … '));
   };
@@ -392,7 +394,7 @@ function uebungen(l, nxt) {
     S.kurs[l.id] = { done: p >= 70 || !!prev?.done, best: Math.max(p, prev?.best || 0) }; save();
     box.innerHTML = `<div class="card" style="text-align:center"><div class="stat" style="font-size:2.6em">${score}/${items.length}</div>
       <p>${p >= 70 ? '<span class="badge ok">Lektion geschafft!</span>' : '<span class="badge warn">Ab 70 % gilt die Lektion als geschafft.</span>'}</p>
-      <div class="row" style="justify-content:center"><button class="btn" data-ue="again">Nochmal</button>${nxt ? `<a class="btn primary" href="#/lektion/${nxt.id}">Nächste Lektion ›</a>` : `<a class="btn primary" href="#/dtz">Zur B1-Prüfung ›</a>`}</div></div>`;
+      <div class="row" style="justify-content:center"><button class="btn" data-ue="again">Nochmal</button>${nxt ? `<a class="btn primary" href="#lektion--${nxt.id}">Nächste Lektion ›</a>` : `<a class="btn primary" href="#dtz">Zur B1-Prüfung ›</a>`}</div></div>`;
     box.onclick = e => { if (e.target.closest('[data-ue="again"]')) uebungen(l, nxt); };
   }
   show();
@@ -409,11 +411,11 @@ function vokabeln(lessonId) {
     pool = [...due, ...neu].slice(0, 20);
   } else pool = shuffle(pool);
   const total = D.vok.length, L = learned(S.vok, D.vok.map(v => v.id));
-  if (!pool.length) { render(`${back('#/kurs', 'Kurs')}<h1>Vokabeltrainer</h1><div class="card"><p>Heute ist nichts fällig. Bearbeite eine neue Lektion, dann kommen neue Wörter dazu.</p><p class="muted">${L} von ${total} Wörtern sicher gelernt.</p></div>`); return; }
+  if (!pool.length) { render(`${back('#kurs', 'Kurs')}<h1>Vokabeltrainer</h1><div class="card"><p>Heute ist nichts fällig. Bearbeite eine neue Lektion, dann kommen neue Wörter dazu.</p><p class="muted">${L} von ${total} Wörtern sicher gelernt.</p></div>`); return; }
   let i = 0, flipped = false, dir = 'de';
   function show() {
     const v = pool[i];
-    render(`${back(lessonId ? '#/lektion/' + lessonId + '/vok' : '#/kurs', 'Zurück')}<h1>Vokabeltrainer</h1>
+    render(`${back(lessonId ? '#lektion--' + lessonId + '--vok' : '#kurs', 'Zurück')}<h1>Vokabeltrainer</h1>
       <div class="chips"><button class="chip ${dir === 'de' ? 'on' : ''}" data-dir="de">Deutsch → Russisch</button><button class="chip ${dir === 'ru' ? 'on' : ''}" data-dir="ru">Russisch → Deutsch</button></div>
       <div class="row" style="margin-bottom:10px"><div style="flex:1">${bar(pct(i, pool.length))}</div><span class="small muted">${i + 1}/${pool.length}</span></div>
       <div class="card flash" data-act="flip" role="button" aria-label="Karte umdrehen">
@@ -433,7 +435,7 @@ function vokabeln(lessonId) {
       srsGrade(S.vok, pool[i].id, a === 'yes');
       if (a === 'no') pool.push(pool[i]);
       i++; flipped = false;
-      if (i >= pool.length) render(`${back('#/kurs', 'Kurs')}<div class="card"><h2>Fertig für jetzt!</h2><p>${learned(S.vok, D.vok.map(v => v.id))} von ${total} Wörtern sicher gelernt.</p><a class="btn primary" href="#/kurs">Zum Kurs</a></div>`);
+      if (i >= pool.length) render(`${back('#kurs', 'Kurs')}<div class="card"><h2>Fertig für jetzt!</h2><p>${learned(S.vok, D.vok.map(v => v.id))} von ${total} Wörtern sicher gelernt.</p><a class="btn primary" href="#kurs">Zum Kurs</a></div>`);
       else show();
     }
   };
@@ -446,7 +448,7 @@ function dtz(part, id) {
   if (part === 'schreiben' && id) {
     const w = D.dtz.schreiben.find(x => x.id === id);
     const key = 'eb.draft.' + id; let draft = ''; try { draft = localStorage.getItem(key) || ''; } catch {}
-    render(`${back('#/dtz', 'B1-Prüfung')}<h1>${esc(w.t)}</h1>${ru(w.ru)}
+    render(`${back('#dtz', 'B1-Prüfung')}<h1>${esc(w.t)}</h1>${ru(w.ru)}
       <div class="card"><p>${esc(w.sit)}</p><p class="small muted">Schreiben Sie zu allen vier Punkten (ca. 30 Minuten):</p><ul>${w.p.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div>
       <label class="lbl" for="txt">Dein Text</label><textarea id="txt" class="text" spellcheck="true" lang="de">${esc(draft)}</textarea>
       <div class="row" style="margin:10px 0 18px"><span class="small muted" id="wc"></span><span class="spacer"></span><button class="btn" data-act="muster">Musterlösung zeigen</button></div>
@@ -458,8 +460,8 @@ function dtz(part, id) {
     cleanup = () => { $app.onclick = null; };
     return;
   }
-  render(`${back('#/kurs', 'Kurs')}<h1>B1-Prüfung (DTZ)</h1><p>${esc(D.dtz.info.de)}</p><p class="ru" lang="ru">${esc(D.dtz.info.ru)}</p>
-    <h2 style="margin-top:20px">Schreiben</h2><div class="grid two">${D.dtz.schreiben.map(w => `<a class="tile" href="#/dtz/schreiben/${w.id}"><h3>${esc(w.t)}</h3>${ru(w.ru)}<div class="meta">4 Leitpunkte · mit Musterlösung</div><span class="arrow">›</span></a>`).join('')}</div>
+  render(`${back('#kurs', 'Kurs')}<h1>B1-Prüfung (DTZ)</h1><p>${esc(D.dtz.info.de)}</p><p class="ru" lang="ru">${esc(D.dtz.info.ru)}</p>
+    <h2 style="margin-top:20px">Schreiben</h2><div class="grid two">${D.dtz.schreiben.map(w => `<a class="tile" href="#dtz--schreiben--${w.id}"><h3>${esc(w.t)}</h3>${ru(w.ru)}<div class="meta">4 Leitpunkte · mit Musterlösung</div><span class="arrow">›</span></a>`).join('')}</div>
     <h2 style="margin-top:20px">Sprechen</h2>
     ${D.dtz.sprechen.map(s => `<div class="card"><h3>${esc(s.t)}</h3>${ru(s.ru)}<ul class="list" style="margin-top:8px">${s.fragen.map(f => `<li class="vok"><span>${esc(f)}</span>${speakBtn(f)}</li>`).join('')}</ul></div>`).join('')}
     <div class="notice">Tipp: Nimm deine Antworten mit dem Handy auf und hör sie dir an. Sprich in ganzen Sätzen und benutze weil, deshalb, außerdem.</div>`);
@@ -476,9 +478,9 @@ function docs() {
   const myAmt = S.amt && D.amt.behoerden.find(b => b.id === S.amt);
   render(`<h1>Unterlagen-Checkliste</h1>
     <p class="muted">Welche Unterlagen genau nötig sind, legt deine Behörde fest. Diese Liste zeigt, was typischerweise verlangt wird.${ru('Точный список документов определяет ваше ведомство. Здесь — то, что требуют обычно.')}</p>
-    ${myAmt?.downloads ? `<div class="notice ok"><b>${esc(myAmt.name)}:</b> ${myAmt.downloads.map(d => `<a href="${d.url}" target="_blank" rel="noopener">${esc(d.t)}</a>`).join(', ')}${myAmt.hinweis ? `<div class="small" style="margin-top:6px">${esc(myAmt.hinweis)}</div>` : ''}</div>` : `<div class="notice">Wähle unter <a href="#/amt">Behörden</a> deinen Wohnort – dann siehst du hier die Hinweise deiner Behörde.</div>`}
+    ${myAmt?.downloads ? `<div class="notice ok"><b>${esc(myAmt.name)}:</b> ${myAmt.downloads.map(d => `<a href="${d.url}" target="_blank" rel="noopener">${esc(d.t)}</a>`).join(', ')}${myAmt.hinweis ? `<div class="small" style="margin-top:6px">${esc(myAmt.hinweis)}</div>` : ''}</div>` : `<div class="notice">Wähle unter <a href="#amt">Behörden</a> deinen Wohnort – dann siehst du hier die Hinweise deiner Behörde.</div>`}
     <div class="card no-print"><b>Meine Situation</b>${ru('Моя ситуация')}<div class="chips" style="margin:10px 0 0">${PERSONAS.map(([k, n]) => `<button class="chip ${S.persona.includes(k) ? 'on' : ''}" data-p="${k}">${n}</button>`).join('')}</div></div>
-    <div class="card"><div class="row"><b>${done} von ${all.length} erledigt</b><span class="spacer"></span><button class="btn small no-print" data-act="print">Drucken / PDF</button></div><div style="margin-top:8px">${bar(pct(done, all.length))}</div></div>
+    <div class="card"><div class="row"><b>${done} von ${all.length} erledigt</b><span class="spacer"></span>${EMBED ? '' : '<button class="btn small no-print" data-act="print">Drucken / PDF</button>'}</div><div style="margin-top:8px">${bar(pct(done, all.length))}</div></div>
     ${groups.map(g => `<div class="card"><h2>${esc(g.g)}</h2>${ru(g.gru)}<ul class="list">${g.items.map(it => `<li><label class="check ${S.docs[it.id] ? 'done' : ''}"><input type="checkbox" data-doc="${it.id}" ${S.docs[it.id] ? 'checked' : ''}><div><span class="t">${esc(it.t)}</span>${ru(it.ru)}${it.tip ? `<div class="tip">${esc(it.tip)}${ru(it.tru)}</div>` : ''}</div></label></li>`).join('')}</ul></div>`).join('')}
     <p class="small muted">Tipp: Kopien ins Antragsformular nur, wenn die Behörde es verlangt. Fremdsprachige Urkunden immer mit Übersetzung von beeidigten Übersetzer:innen.</p>`);
   $app.onchange = e => { const c = e.target.closest('[data-doc]'); if (c) { S.docs[c.dataset.doc] = c.checked; save(); c.closest('.check').classList.toggle('done', c.checked); const n = all.filter(i => S.docs[i.id]).length; $app.querySelector('.card .row b').textContent = `${n} von ${all.length} erledigt`; $app.querySelector('.card .progress i').style.width = pct(n, all.length) + '%'; } };
@@ -527,7 +529,7 @@ function amt() {
     <div id="treffer" style="margin-top:12px"></div>
     ${mine ? `<h2 style="margin-top:18px">Meine Behörde</h2>${amtCard(mine)}<button class="btn small ghost" data-act="forget">Andere Behörde wählen</button>` : ''}
     <h2 style="margin-top:22px">Beratung, Tests und Kurse</h2>
-    ${D.info.kontakte.map(g => `<div class="card"><h3>${esc(g.g)}</h3><ul class="list">${g.items.map(k => `<li><b>${k.web ? `<a href="${esc(k.web)}" target="_blank" rel="noopener">${esc(k.name)}</a>` : `<a href="#/${k.go}">${esc(k.name)}</a>`}</b><div class="small">${esc(k.d)}</div>${ru(k.dru)}</li>`).join('')}</ul></div>`).join('')}
+    ${D.info.kontakte.map(g => `<div class="card"><h3>${esc(g.g)}</h3><ul class="list">${g.items.map(k => `<li><b>${k.web ? `<a href="${esc(k.web)}" target="_blank" rel="noopener">${esc(k.name)}</a>` : `<a href="#${k.go}">${esc(k.name)}</a>`}</b><div class="small">${esc(k.d)}</div>${ru(k.dru)}</li>`).join('')}</ul></div>`).join('')}
     <h2 style="margin-top:22px">Alle Einbürgerungsbehörden in Sachsen</h2>
     <div class="card"><ul class="list">${D.amt.behoerden.map(b => `<li class="row"><div style="flex:1"><b>${esc(b.name)}</b><div class="small muted">${esc(b.sitz)} · u. a. ${b.orte.slice(0, 4).map(esc).join(', ')}</div></div><button class="btn small" data-amt="${b.id}">Wählen</button></li>`).join('')}</ul></div>
     <p class="small muted">Weitere Bundesländer folgen. Fehler gefunden? Bitte melden – Kontaktdaten ändern sich manchmal.</p>`);
@@ -561,7 +563,7 @@ function check() {
       <label class="check" style="margin-top:12px"><input type="checkbox" id="ehe" ${S.ehe ? 'checked' : ''}><div>Ich bin mit einer/einem Deutschen verheiratet (Ehe besteht seit mind. 2 Jahren)${ru('Я в браке с гражданином(-кой) Германии (не менее 2 лет)')}</div></label>
       <div style="margin-top:12px">${frist}</div>
       <p class="small muted">Zeiten mit Duldung oder Aufenthaltsgestattung zählen meist nicht oder nur teilweise. Unterbrechungen durch Auslandsaufenthalte mit der Behörde klären.</p></div>
-    ${overall ? `<div class="card"><h2><span class="ampel ${overall}"></span>${overall === 'g' ? 'Gute Chancen' : overall === 'y' ? 'Fast – es fehlen noch Schritte' : 'Derzeit nicht erfüllt'}</h2><p class="small">${overall === 'g' ? 'Nach deinen Angaben erfüllst du die Voraussetzungen. Nimm Kontakt zu deiner Behörde auf.' : overall === 'y' ? 'Einige Punkte musst du noch erledigen oder klären. Die Hinweise unten zeigen, was zu tun ist.' : 'Mindestens eine Voraussetzung fehlt. Lass dich beraten – oft gibt es einen Weg.'}</p>${overall !== 'r' ? '<a class="btn small" href="#/amt">Zu meiner Behörde</a>' : '<a class="btn small" href="#/amt">Beratungsstellen</a>'}</div>` : ''}
+    ${overall ? `<div class="card"><h2><span class="ampel ${overall}"></span>${overall === 'g' ? 'Gute Chancen' : overall === 'y' ? 'Fast – es fehlen noch Schritte' : 'Derzeit nicht erfüllt'}</h2><p class="small">${overall === 'g' ? 'Nach deinen Angaben erfüllst du die Voraussetzungen. Nimm Kontakt zu deiner Behörde auf.' : overall === 'y' ? 'Einige Punkte musst du noch erledigen oder klären. Die Hinweise unten zeigen, was zu tun ist.' : 'Mindestens eine Voraussetzung fehlt. Lass dich beraten – oft gibt es einen Weg.'}</p>${overall !== 'r' ? '<a class="btn small" href="#amt">Zu meiner Behörde</a>' : '<a class="btn small" href="#amt">Beratungsstellen</a>'}</div>` : ''}
     ${C.map((c, k) => { const sel = S.check[c.id]; const o = sel != null ? c.o[sel] : null;
       return `<div class="card"><div class="muted small">${k + 1} / ${C.length}</div><h3>${esc(c.q)}</h3>${ru(c.ru)}<div class="opts" style="margin-top:10px">${c.o.map((x, i) => `<button class="opt ${sel === i ? 'sel' : ''}" data-c="${c.id}" data-i="${i}"><span class="ampel ${['r', 'y', 'g'][x.v]}" aria-hidden="true"></span><span>${esc(x.t)}${ru(x.ru)}</span></button>`).join('')}</div>${o?.hint ? `<div class="tip" style="margin-top:10px">${esc(o.hint)}${ru(o.hru)}</div>` : ''}</div>`; }).join('')}`);
   document.getElementById('ein').onchange = e => { S.einreise = e.target.value; save(); check(); };
@@ -589,7 +591,7 @@ function einstellungen() {
     <div class="card"><b>Schriftgröße</b><div class="chips" style="margin-top:10px">${[['m', 'Normal'], ['l', 'Groß'], ['xl', 'Sehr groß']].map(([k, n]) => `<button class="chip ${S.size === k ? 'on' : ''}" data-size="${k}">${n}</button>`).join('')}</div>
       <b>Darstellung</b><div class="chips" style="margin-top:10px">${[['auto', 'Automatisch'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([k, n]) => `<button class="chip ${S.theme === k ? 'on' : ''}" data-theme="${k}">${n}</button>`).join('')}</div></div>
     <div class="card"><h2>Fortschritt sichern</h2><p class="small">Dein Fortschritt wird nur auf diesem Gerät gespeichert. Mit einer Sicherungsdatei kannst du ihn auf ein anderes Gerät übertragen.</p>
-      <div class="row"><button class="btn small" data-act="export">Sicherung herunterladen</button><label class="btn small">Sicherung laden<input type="file" accept="application/json" id="imp" hidden></label><button class="btn small ghost" data-act="reset">Alles zurücksetzen</button></div></div>
+      <div class="row">${EMBED ? '' : '<button class="btn small" data-act="export">Sicherung herunterladen</button>'}<label class="btn small">Sicherung laden<input type="file" accept="application/json" id="imp" hidden></label><button class="btn small ghost" data-act="reset">Alles zurücksetzen</button></div></div>
     <div class="card"><h2>App installieren</h2><p class="small"><b>iPhone/iPad:</b> In Safari auf „Teilen“ tippen → „Zum Home-Bildschirm“. <b>Android:</b> Im Chrome-Menü „App installieren“ wählen. Danach funktioniert alles auch ohne Internet.</p></div>
     <div class="card"><h2>Quellen & Hinweise</h2>
       <p class="small"><b>Fragenkatalog:</b> ${esc(D.qmeta.source)}. Amtliches Werk nach § 5 UrhG, unverändert wiedergegeben. Lösungen: ${esc(D.qmeta.answers)}.</p>
@@ -607,7 +609,8 @@ function einstellungen() {
     if (t.dataset.size) { S.size = t.dataset.size; save(); applyPrefs(); einstellungen(); }
     else if (t.dataset.theme) { S.theme = t.dataset.theme; save(); applyPrefs(); einstellungen(); }
     else if (t.dataset.act === 'export') { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = `einbuergerung-sicherung-${new Date().toISOString().slice(0, 10)}.json`; a.click(); }
-    else if (t.dataset.act === 'reset' && confirm('Wirklich den gesamten Fortschritt löschen?')) { S = Object.assign({}, defaults); save(); applyPrefs(); toast('Zurückgesetzt'); einstellungen(); }
+    else if (t.dataset.act === 'reset' && !t.dataset.sure) { t.dataset.sure = '1'; t.textContent = 'Wirklich alles löschen? Nochmal tippen'; }
+    else if (t.dataset.act === 'reset') { S = Object.assign({}, defaults); save(); applyPrefs(); toast('Zurückgesetzt'); einstellungen(); }
   };
   cleanup = () => { $app.onclick = null; $app.onchange = null; };
 }
