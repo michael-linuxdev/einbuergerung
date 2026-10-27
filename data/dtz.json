@@ -1,18 +1,453 @@
 {
- "info":{"de":"Der Deutsch-Test für Zuwanderer (DTZ) prüft A2 und B1. Für die Einbürgerung brauchst du B1 in allen Teilen. Teile: Hören (ca. 25 Min.), Lesen (45 Min.), Schreiben (30 Min.), Sprechen (ca. 16 Min., mit Partner). Auch andere B1-Zertifikate werden anerkannt (z. B. Goethe, telc, ÖSD) – frag deine Behörde.","ru":"Тест для иммигрантов (DTZ) проверяет уровни A2 и B1. Для натурализации нужен B1 во всех частях. Части: аудирование (ок. 25 мин), чтение (45 мин), письмо (30 мин), говорение (ок. 16 мин, с партнёром). Признаются и другие сертификаты B1 (например, Goethe, telc, ÖSD) — уточните в своём ведомстве."},
- "schreiben":[
-  {"id":"w1","t":"Kurs absagen","ru":"Отменить курс","sit":"Sie haben sich für einen Computerkurs an der Volkshochschule angemeldet. Sie können aber nicht teilnehmen. Schreiben Sie an die VHS.","p":["Grund für die Absage","Geld zurück?","anderer Kurs möglich?","Bitte um Antwort"],
-   "muster":"Pirna, 27.10.2026\n\nAbsage Computerkurs\n\nSehr geehrte Damen und Herren,\n\nich habe mich für den Computerkurs ab 3. November angemeldet. Leider kann ich nicht teilnehmen, weil ich ab November in einer neuen Firma im Schichtdienst arbeite.\n\nIch habe die Kursgebühr von 89 Euro schon überwiesen. Können Sie mir das Geld bitte zurückzahlen?\n\nAußerdem möchte ich fragen, ob es den Kurs auch am Samstag gibt. Dann könnte ich vielleicht später teilnehmen.\n\nIch freue mich auf Ihre Antwort.\n\nMit freundlichen Grüßen\nOlga Ivanova"},
-  {"id":"w2","t":"Beschwerde beim Vermieter","ru":"Жалоба арендодателю","sit":"In Ihrer Wohnung funktioniert seit einer Woche das warme Wasser nicht. Sie haben schon angerufen, aber niemand ist gekommen. Schreiben Sie an Ihre Vermieterin.","p":["Problem beschreiben","seit wann / was Sie schon gemacht haben","was Sie erwarten","bis wann"],
-   "muster":"Freital, 27.10.2026\n\nKein warmes Wasser in der Wohnung Lindenstraße 4\n\nSehr geehrte Frau Krause,\n\nin meiner Wohnung gibt es seit einer Woche kein warmes Wasser. Ich kann nicht duschen und muss das Wasser für meine Kinder auf dem Herd warm machen.\n\nIch habe schon am Montag und am Mittwoch bei der Hausverwaltung angerufen, aber leider ist niemand gekommen.\n\nBitte schicken Sie so schnell wie möglich einen Handwerker. Ich bin jeden Tag ab 15 Uhr zu Hause.\n\nIch bitte Sie, das Problem bis Freitag zu lösen. Sonst muss ich die Miete mindern.\n\nMit freundlichen Grüßen\nAndrej Kowalenko"},
-  {"id":"w3","t":"Einladung an eine Freundin","ru":"Приглашение подруги","sit":"Sie feiern Ihren Geburtstag. Schreiben Sie eine E-Mail an Ihre Freundin Anna.","p":["Wann und wo","Wer kommt","Was soll sie mitbringen","Wie kommt sie zu Ihnen"],
-   "muster":"Liebe Anna,\n\nam Samstag, den 14. November, feiere ich meinen 35. Geburtstag und ich möchte dich herzlich einladen! Die Party beginnt um 18 Uhr bei mir zu Hause.\n\nEs kommen ungefähr zehn Leute: meine Kolleginnen, ein paar Nachbarn und natürlich meine Familie.\n\nKannst du vielleicht einen Salat mitbringen? Für Getränke und Kuchen sorge ich.\n\nDu kannst mit der S-Bahn bis Pirna fahren. Ich hole dich gern am Bahnhof ab, ruf mich einfach kurz an.\n\nIch freue mich auf dich!\n\nViele Grüße\nIrina"},
-  {"id":"w4","t":"Termin bei der Behörde verschieben","ru":"Перенести приём в ведомстве","sit":"Sie haben eine Einladung zum Termin bei der Einbürgerungsbehörde bekommen. An dem Tag haben Sie Ihre B1-Prüfung. Schreiben Sie an die Behörde.","p":["Dank für die Einladung","Grund, warum Sie nicht kommen können","neuer Terminvorschlag","Frage: Unterlagen mitbringen?"],
-   "muster":"Pirna, 27.10.2026\n\nIhr Zeichen: [Aktenzeichen] – Bitte um neuen Termin\n\nSehr geehrte Damen und Herren,\n\nvielen Dank für Ihre Einladung zum Termin am 18. November um 9 Uhr.\n\nLeider kann ich an diesem Tag nicht kommen, denn ich schreibe genau dann meine B1-Prüfung an der Volkshochschule.\n\nIn der Woche danach habe ich jeden Tag Zeit, am besten vormittags. Könnten Sie mir bitte einen neuen Termin geben?\n\nAußerdem möchte ich fragen, welche Originalunterlagen ich zum Termin mitbringen soll.\n\nMit freundlichen Grüßen\nSergej Morosow\ngeb. 12.04.1987"}
+ "info": {
+  "de": "Der Deutsch-Test für Zuwanderer (DTZ) prüft A2 und B1. Für die Einbürgerung brauchst du B1 in allen Teilen. Teile: Hören (ca. 25 Min.), Lesen (45 Min.), Schreiben (30 Min.), Sprechen (ca. 16 Min., mit Partner). Auch andere B1-Zertifikate werden anerkannt (z. B. Goethe, telc, ÖSD) – frag deine Behörde.",
+  "ru": "Тест для иммигрантов (DTZ) проверяет уровни A2 и B1. Для натурализации нужен B1 во всех частях. Части: аудирование (ок. 25 мин), чтение (45 мин), письмо (30 мин), говорение (ок. 16 мин, с партнёром). Признаются и другие сертификаты B1 (например, Goethe, telc, ÖSD) — уточните в своём ведомстве."
+ },
+ "schreiben": [
+  {
+   "id": "w1",
+   "t": "Kurs absagen",
+   "ru": "Отменить курс",
+   "sit": "Sie haben sich für einen Computerkurs an der Volkshochschule angemeldet. Sie können aber nicht teilnehmen. Schreiben Sie an die VHS.",
+   "p": [
+    "Grund für die Absage",
+    "Geld zurück?",
+    "anderer Kurs möglich?",
+    "Bitte um Antwort"
+   ],
+   "muster": "Pirna, 27.10.2026\n\nAbsage Computerkurs\n\nSehr geehrte Damen und Herren,\n\nich habe mich für den Computerkurs ab 3. November angemeldet. Leider kann ich nicht teilnehmen, weil ich ab November in einer neuen Firma im Schichtdienst arbeite.\n\nIch habe die Kursgebühr von 89 Euro schon überwiesen. Können Sie mir das Geld bitte zurückzahlen?\n\nAußerdem möchte ich fragen, ob es den Kurs auch am Samstag gibt. Dann könnte ich vielleicht später teilnehmen.\n\nIch freue mich auf Ihre Antwort.\n\nMit freundlichen Grüßen\nOlga Ivanova"
+  },
+  {
+   "id": "w2",
+   "t": "Beschwerde beim Vermieter",
+   "ru": "Жалоба арендодателю",
+   "sit": "In Ihrer Wohnung funktioniert seit einer Woche das warme Wasser nicht. Sie haben schon angerufen, aber niemand ist gekommen. Schreiben Sie an Ihre Vermieterin.",
+   "p": [
+    "Problem beschreiben",
+    "seit wann / was Sie schon gemacht haben",
+    "was Sie erwarten",
+    "bis wann"
+   ],
+   "muster": "Freital, 27.10.2026\n\nKein warmes Wasser in der Wohnung Lindenstraße 4\n\nSehr geehrte Frau Krause,\n\nin meiner Wohnung gibt es seit einer Woche kein warmes Wasser. Ich kann nicht duschen und muss das Wasser für meine Kinder auf dem Herd warm machen.\n\nIch habe schon am Montag und am Mittwoch bei der Hausverwaltung angerufen, aber leider ist niemand gekommen.\n\nBitte schicken Sie so schnell wie möglich einen Handwerker. Ich bin jeden Tag ab 15 Uhr zu Hause.\n\nIch bitte Sie, das Problem bis Freitag zu lösen. Sonst muss ich die Miete mindern.\n\nMit freundlichen Grüßen\nAndrej Kowalenko"
+  },
+  {
+   "id": "w3",
+   "t": "Einladung an eine Freundin",
+   "ru": "Приглашение подруги",
+   "sit": "Sie feiern Ihren Geburtstag. Schreiben Sie eine E-Mail an Ihre Freundin Anna.",
+   "p": [
+    "Wann und wo",
+    "Wer kommt",
+    "Was soll sie mitbringen",
+    "Wie kommt sie zu Ihnen"
+   ],
+   "muster": "Liebe Anna,\n\nam Samstag, den 14. November, feiere ich meinen 35. Geburtstag und ich möchte dich herzlich einladen! Die Party beginnt um 18 Uhr bei mir zu Hause.\n\nEs kommen ungefähr zehn Leute: meine Kolleginnen, ein paar Nachbarn und natürlich meine Familie.\n\nKannst du vielleicht einen Salat mitbringen? Für Getränke und Kuchen sorge ich.\n\nDu kannst mit der S-Bahn bis Pirna fahren. Ich hole dich gern am Bahnhof ab, ruf mich einfach kurz an.\n\nIch freue mich auf dich!\n\nViele Grüße\nIrina"
+  },
+  {
+   "id": "w4",
+   "t": "Termin bei der Behörde verschieben",
+   "ru": "Перенести приём в ведомстве",
+   "sit": "Sie haben eine Einladung zum Termin bei der Einbürgerungsbehörde bekommen. An dem Tag haben Sie Ihre B1-Prüfung. Schreiben Sie an die Behörde.",
+   "p": [
+    "Dank für die Einladung",
+    "Grund, warum Sie nicht kommen können",
+    "neuer Terminvorschlag",
+    "Frage: Unterlagen mitbringen?"
+   ],
+   "muster": "Pirna, 27.10.2026\n\nIhr Zeichen: [Aktenzeichen] – Bitte um neuen Termin\n\nSehr geehrte Damen und Herren,\n\nvielen Dank für Ihre Einladung zum Termin am 18. November um 9 Uhr.\n\nLeider kann ich an diesem Tag nicht kommen, denn ich schreibe genau dann meine B1-Prüfung an der Volkshochschule.\n\nIn der Woche danach habe ich jeden Tag Zeit, am besten vormittags. Könnten Sie mir bitte einen neuen Termin geben?\n\nAußerdem möchte ich fragen, welche Originalunterlagen ich zum Termin mitbringen soll.\n\nMit freundlichen Grüßen\nSergej Morosow\ngeb. 12.04.1987"
+  }
  ],
- "sprechen":[
-  {"t":"Teil 1 – Über sich sprechen","ru":"Часть 1 — Рассказ о себе","fragen":["Wie heißen Sie und woher kommen Sie?","Seit wann leben Sie in Deutschland und wo wohnen Sie?","Erzählen Sie etwas über Ihre Familie.","Was arbeiten Sie oder was haben Sie früher gearbeitet?","Wie und wo haben Sie Deutsch gelernt?","Was machen Sie gern in Ihrer Freizeit?"]},
-  {"t":"Teil 2 – Bild beschreiben und erzählen","ru":"Часть 2 — Описание картинки и рассказ","fragen":["Thema „Einkaufen“: Beschreiben Sie eine Situation im Supermarkt. Wo kaufen Sie ein? Was ist in Ihrem Heimatland anders?","Thema „Arbeit“: Beschreiben Sie einen Arbeitsplatz im Büro. Wie sieht Ihr Arbeitstag aus?","Thema „Familie“: Eine Familie isst zusammen. Wann isst Ihre Familie zusammen? Was gibt es bei Ihnen am Wochenende?","Thema „Umzug“: Menschen tragen Kisten. Sind Sie schon einmal umgezogen? Wie war das?"]},
-  {"t":"Teil 3 – Gemeinsam planen","ru":"Часть 3 — Совместное планирование","fragen":["Ihr Nachbar zieht um. Planen Sie zusammen, wie Sie helfen: Wann? Wer hilft noch? Auto? Essen und Getränke?","Ihre Kursleiterin hat Geburtstag. Planen Sie eine Überraschung: Geschenk? Wer kauft was? Wann? Kuchen?","Sie möchten mit Ihren Kindern einen Ausflug in die Sächsische Schweiz machen: Wann? Wie hinkommen? Was mitnehmen? Was kostet es?"]}
+ "sprechen": [
+  {
+   "t": "Teil 1 – Über sich sprechen",
+   "ru": "Часть 1 — Рассказ о себе",
+   "fragen": [
+    "Wie heißen Sie und woher kommen Sie?",
+    "Seit wann leben Sie in Deutschland und wo wohnen Sie?",
+    "Erzählen Sie etwas über Ihre Familie.",
+    "Was arbeiten Sie oder was haben Sie früher gearbeitet?",
+    "Wie und wo haben Sie Deutsch gelernt?",
+    "Was machen Sie gern in Ihrer Freizeit?"
+   ]
+  },
+  {
+   "t": "Teil 2 – Bild beschreiben und erzählen",
+   "ru": "Часть 2 — Описание картинки и рассказ",
+   "fragen": [
+    "Thema „Einkaufen“: Beschreiben Sie eine Situation im Supermarkt. Wo kaufen Sie ein? Was ist in Ihrem Heimatland anders?",
+    "Thema „Arbeit“: Beschreiben Sie einen Arbeitsplatz im Büro. Wie sieht Ihr Arbeitstag aus?",
+    "Thema „Familie“: Eine Familie isst zusammen. Wann isst Ihre Familie zusammen? Was gibt es bei Ihnen am Wochenende?",
+    "Thema „Umzug“: Menschen tragen Kisten. Sind Sie schon einmal umgezogen? Wie war das?"
+   ]
+  },
+  {
+   "t": "Teil 3 – Gemeinsam planen",
+   "ru": "Часть 3 — Совместное планирование",
+   "fragen": [
+    "Ihr Nachbar zieht um. Planen Sie zusammen, wie Sie helfen: Wann? Wer hilft noch? Auto? Essen und Getränke?",
+    "Ihre Kursleiterin hat Geburtstag. Planen Sie eine Überraschung: Geschenk? Wer kauft was? Wann? Kuchen?",
+    "Sie möchten mit Ihren Kindern einen Ausflug in die Sächsische Schweiz machen: Wann? Wie hinkommen? Was mitnehmen? Was kostet es?"
+   ]
+  }
+ ],
+ "hoeren": [
+  {
+   "id": "h1",
+   "t": "Durchsage am Bahnhof",
+   "ru": "Объявление на вокзале",
+   "text": "Achtung an Gleis 2. Die S-Bahn S1 nach Bad Schandau, planmäßige Abfahrt 8 Uhr 14, fährt heute von Gleis 4. Grund ist eine Weichenstörung. Wir bitten um Entschuldigung.",
+   "q": [
+    {
+     "q": "Von welchem Gleis fährt die S-Bahn heute?",
+     "o": [
+      "Gleis 1",
+      "Gleis 2",
+      "Gleis 4",
+      "Gleis 14"
+     ],
+     "a": 2
+    },
+    {
+     "q": "Wohin fährt die S-Bahn?",
+     "o": [
+      "nach Dresden",
+      "nach Bad Schandau",
+      "nach Pirna",
+      "nach Leipzig"
+     ],
+     "a": 1
+    }
+   ]
+  },
+  {
+   "id": "h2",
+   "t": "Anrufbeantworter: Arztpraxis",
+   "ru": "Автоответчик: врачебный кабинет",
+   "text": "Guten Tag, Sie sind verbunden mit der Praxis Dr. Lehmann. Unsere Praxis ist vom 23. bis 27. Dezember geschlossen. In dringenden Fällen wenden Sie sich bitte an den ärztlichen Bereitschaftsdienst unter der Nummer 116 117. Ab dem 30. Dezember sind wir wieder für Sie da.",
+   "q": [
+    {
+     "q": "Was sollen Patienten in dringenden Fällen tun?",
+     "o": [
+      "die 110 anrufen",
+      "die 116 117 anrufen",
+      "am 30. Dezember kommen",
+      "eine E-Mail schreiben"
+     ],
+     "a": 1
+    },
+    {
+     "q": "Ab wann ist die Praxis wieder geöffnet?",
+     "o": [
+      "ab 23. Dezember",
+      "ab 27. Dezember",
+      "ab 30. Dezember",
+      "ab 2. Januar"
+     ],
+     "a": 2
+    }
+   ]
+  },
+  {
+   "id": "h3",
+   "t": "Nachricht von der Kita",
+   "ru": "Сообщение из детского сада",
+   "text": "Hallo Frau Popova, hier ist Frau Weber von der Kita Sonnenschein. Morgen machen wir einen Ausflug in den Zoo. Bitte geben Sie Ihrer Tochter Regenkleidung und etwas zu trinken mit. Das Mittagessen bekommen die Kinder dort. Wir sind um 15 Uhr zurück. Danke und bis morgen!",
+   "q": [
+    {
+     "q": "Was soll das Kind mitbringen?",
+     "o": [
+      "Mittagessen",
+      "Regenkleidung und Getränk",
+      "Geld für den Zoo",
+      "Hausschuhe"
+     ],
+     "a": 1
+    },
+    {
+     "q": "Wann ist die Gruppe zurück?",
+     "o": [
+      "um 12 Uhr",
+      "um 13 Uhr",
+      "um 15 Uhr",
+      "um 17 Uhr"
+     ],
+     "a": 2
+    }
+   ]
+  },
+  {
+   "id": "h4",
+   "t": "Anruf vom Landratsamt",
+   "ru": "Звонок из Ландратсамта",
+   "text": "Guten Tag Herr Melnyk, hier spricht Frau Hoffmann vom Landratsamt, Abteilung Staatsangehörigkeit. Ihr Antrag ist vollständig, nur die Gehaltsabrechnungen der letzten drei Monate fehlen noch. Bitte schicken Sie uns diese bis Ende des Monats per Post. Wenn Sie Fragen haben, rufen Sie mich dienstags oder donnerstags an.",
+   "q": [
+    {
+     "q": "Was fehlt noch?",
+     "o": [
+      "der Pass",
+      "die Gehaltsabrechnungen",
+      "das B1-Zertifikat",
+      "die Geburtsurkunde"
+     ],
+     "a": 1
+    },
+    {
+     "q": "Wie soll Herr Melnyk die Unterlagen schicken?",
+     "o": [
+      "per E-Mail",
+      "per Post",
+      "persönlich vorbeibringen",
+      "per Fax"
+     ],
+     "a": 1
+    },
+    {
+     "q": "Wann kann er Frau Hoffmann anrufen?",
+     "o": [
+      "jeden Tag",
+      "montags und mittwochs",
+      "dienstags und donnerstags",
+      "nur freitags"
+     ],
+     "a": 2
+    }
+   ]
+  },
+  {
+   "id": "h5",
+   "t": "Radio: Wetter und Verkehr",
+   "ru": "Радио: погода и дороги",
+   "text": "Und nun das Wetter für Sachsen: Am Vormittag noch Regen, ab Mittag wird es trocken und freundlich bei 14 Grad. Im Erzgebirge kann es in der Nacht Frost geben. Zum Verkehr: Auf der A17 zwischen Pirna und Dresden-Prohlis gibt es nach einem Unfall zehn Kilometer Stau.",
+   "q": [
+    {
+     "q": "Wie wird das Wetter am Nachmittag?",
+     "o": [
+      "Regen",
+      "trocken und freundlich",
+      "Schnee",
+      "Gewitter"
+     ],
+     "a": 1
+    },
+    {
+     "q": "Wo gibt es Stau?",
+     "o": [
+      "auf der A4",
+      "auf der A17",
+      "in Leipzig",
+      "im Erzgebirge"
+     ],
+     "a": 1
+    }
+   ]
+  },
+  {
+   "id": "h6",
+   "t": "Gespräch beim Vermieter",
+   "ru": "Разговор с арендодателем",
+   "text": "Frau Klein, ich habe Ihre Nachricht bekommen. Der Handwerker kann leider erst am Donnerstag kommen, nicht am Mittwoch. Er kommt zwischen 8 und 12 Uhr. Wenn Sie nicht da sind, kann der Hausmeister ihm die Wohnung aufschließen. Geben Sie mir bitte bis morgen Bescheid.",
+   "q": [
+    {
+     "q": "Wann kommt der Handwerker?",
+     "o": [
+      "Mittwoch, 8 bis 12 Uhr",
+      "Donnerstag, 8 bis 12 Uhr",
+      "Donnerstag, ab 12 Uhr",
+      "morgen"
+     ],
+     "a": 1
+    },
+    {
+     "q": "Was soll Frau Klein tun?",
+     "o": [
+      "den Handwerker anrufen",
+      "bis morgen Bescheid geben",
+      "den Schlüssel abholen",
+      "nichts"
+     ],
+     "a": 1
+    }
+   ]
+  }
+ ],
+ "lesen": [
+  {
+   "id": "l1",
+   "t": "Aushang im Treppenhaus",
+   "ru": "Объявление на лестнице",
+   "text": "Liebe Mieterinnen und Mieter,\nam Dienstag, dem 12. November, wird zwischen 9 und 13 Uhr das Wasser im ganzen Haus abgestellt. Grund sind Reparaturen an den Leitungen. Bitte füllen Sie sich vorher Wasser ab. Die Waschmaschinen im Keller können an diesem Tag erst ab 14 Uhr benutzt werden.\nIhre Hausverwaltung",
+   "q": [
+    {
+     "q": "Was passiert am 12. November?",
+     "o": [
+      "Es gibt kein Wasser von 9 bis 13 Uhr.",
+      "Der Strom wird abgestellt.",
+      "Die Mieter müssen umziehen.",
+      "Die Waschmaschinen werden verkauft."
+     ],
+     "a": 0
+    },
+    {
+     "q": "Ab wann kann man waschen?",
+     "o": [
+      "ab 9 Uhr",
+      "ab 13 Uhr",
+      "ab 14 Uhr",
+      "am nächsten Tag"
+     ],
+     "a": 2
+    }
+   ]
+  },
+  {
+   "id": "l2",
+   "t": "Brief vom Jobcenter (Auszug)",
+   "ru": "Письмо из джобцентра (отрывок)",
+   "text": "Sehr geehrte Frau Orlova,\nbitte kommen Sie am Montag, dem 4. März, um 10:30 Uhr in Zimmer 214. Wir möchten mit Ihnen über Ihre berufliche Situation sprechen. Bringen Sie bitte Ihren Lebenslauf und Ihre Zeugnisse mit. Wenn Sie den Termin nicht wahrnehmen können, teilen Sie uns dies bitte vorher mit. Ohne wichtigen Grund kann Ihre Leistung gemindert werden.",
+   "q": [
+    {
+     "q": "Was soll Frau Orlova mitbringen?",
+     "o": [
+      "Pass und Mietvertrag",
+      "Lebenslauf und Zeugnisse",
+      "Kontoauszüge",
+      "nichts"
+     ],
+     "a": 1
+    },
+    {
+     "q": "Was passiert, wenn sie ohne Grund nicht kommt?",
+     "o": [
+      "nichts",
+      "Sie bekommt einen neuen Termin automatisch.",
+      "Die Leistung kann gekürzt werden.",
+      "Sie muss umziehen."
+     ],
+     "a": 2
+    }
+   ]
+  },
+  {
+   "id": "l3",
+   "t": "Kursangebot der Volkshochschule",
+   "ru": "Предложение курсов народного университета",
+   "text": "Vorbereitung auf den Einbürgerungstest\nIn vier Abenden lernen Sie die wichtigsten Themen: Politik in der Demokratie, Geschichte und Verantwortung, Mensch und Gesellschaft. Kurszeiten: mittwochs 18–20:30 Uhr, Beginn 6. November. Gebühr: 49 Euro, ermäßigt 25 Euro. Anmeldung bis 30. Oktober online oder in der Geschäftsstelle. Der Test selbst kostet zusätzlich 25 Euro.",
+   "q": [
+    {
+     "q": "Wie oft trifft sich der Kurs?",
+     "o": [
+      "einmal",
+      "an vier Abenden",
+      "jeden Tag",
+      "zehnmal"
+     ],
+     "a": 1
+    },
+    {
+     "q": "Was kostet der Test?",
+     "o": [
+      "ist inklusive",
+      "25 Euro zusätzlich",
+      "49 Euro",
+      "kostenlos"
+     ],
+     "a": 1
+    },
+    {
+     "q": "Bis wann muss man sich anmelden?",
+     "o": [
+      "6. November",
+      "30. Oktober",
+      "jederzeit",
+      "am ersten Abend"
+     ],
+     "a": 1
+    }
+   ]
+  },
+  {
+   "id": "l4",
+   "t": "Anzeige: Wohnung",
+   "ru": "Объявление: квартира",
+   "text": "Freital-Deuben: Helle 3-Zimmer-Wohnung, 68 m², 2. OG, Balkon, Einbauküche. Kaltmiete 480 €, Nebenkosten 170 €, Kaution 3 Kaltmieten. Haustiere nach Absprache. Frei ab 1. Dezember. Besichtigung nur nach telefonischer Vereinbarung: 0351 123456 (werktags 9–17 Uhr).",
+   "q": [
+    {
+     "q": "Wie hoch ist die Warmmiete?",
+     "o": [
+      "480 €",
+      "170 €",
+      "650 €",
+      "1440 €"
+     ],
+     "a": 2
+    },
+    {
+     "q": "Wie bekommt man einen Besichtigungstermin?",
+     "o": [
+      "einfach vorbeikommen",
+      "per Telefon werktags",
+      "per Brief",
+      "am Wochenende anrufen"
+     ],
+     "a": 1
+    }
+   ]
+  },
+  {
+   "id": "l5",
+   "t": "Bescheid (Auszug)",
+   "ru": "Решение ведомства (отрывок)",
+   "text": "Ihr Antrag auf Elterngeld vom 15.08. wurde bewilligt. Sie erhalten ab dem 1. September monatlich 1.120,00 Euro für die Dauer von 12 Monaten. Rechtsbehelfsbelehrung: Gegen diesen Bescheid kann innerhalb eines Monats nach Bekanntgabe Widerspruch erhoben werden.",
+   "q": [
+    {
+     "q": "Wurde der Antrag angenommen?",
+     "o": [
+      "ja",
+      "nein",
+      "teilweise",
+      "noch nicht entschieden"
+     ],
+     "a": 0
+    },
+    {
+     "q": "Wie lange kann man Widerspruch einlegen?",
+     "o": [
+      "eine Woche",
+      "zwei Wochen",
+      "einen Monat",
+      "ein Jahr"
+     ],
+     "a": 2
+    }
+   ]
+  },
+  {
+   "id": "l6",
+   "t": "E-Mail einer Kollegin",
+   "ru": "Письмо коллеги",
+   "text": "Hallo Dmitri,\nkannst du am Freitag meine Frühschicht übernehmen? Meine Tochter hat einen Arzttermin und mein Mann ist auf Dienstreise. Ich würde dafür nächste Woche am Samstag für dich arbeiten. Sag bitte bis morgen Bescheid, dann informiere ich den Schichtleiter.\nViele Grüße, Katrin",
+   "q": [
+    {
+     "q": "Was möchte Katrin?",
+     "o": [
+      "Urlaub nehmen",
+      "dass Dmitri ihre Schicht am Freitag übernimmt",
+      "eine neue Stelle",
+      "dass Dmitri den Schichtleiter anruft"
+     ],
+     "a": 1
+    },
+    {
+     "q": "Was bietet Katrin an?",
+     "o": [
+      "Geld",
+      "am Samstag für Dmitri zu arbeiten",
+      "ein Essen",
+      "nichts"
+     ],
+     "a": 1
+    }
+   ]
+  }
  ]
 }

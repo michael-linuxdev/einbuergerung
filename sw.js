@@ -1,6 +1,6 @@
 // Service Worker: alles für die Offline-Nutzung vorhalten.
 // Bei jeder Inhaltsänderung CACHE hochzählen, damit Geräte die neue Version laden.
-const CACHE = 'eb-v1.0.0';
+const CACHE = 'eb-v1.1.0';
 const ASSETS = [
   './', 'index.html', 'app.css', 'app.js', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png',

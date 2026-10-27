@@ -5,9 +5,14 @@ Kostenlose, offline-fähige Web-App (PWA) für Smartphone und Tablet, die auf di
 **Live:** https://einbuergerung.micana.de
 
 ## Funktionen
-- **Einbürgerungstest:** alle 310 Fragen (300 allgemein + 10 Sachsen) mit Lernmodus (Spaced Repetition), Prüfungssimulation (33 Fragen, 60 Min.), Fehlertraining und durchsuchbarem Katalog
+- **Einbürgerungstest:** alle 310 Fragen (300 allgemein + 10 Sachsen) mit Erklärung zu jeder Antwort (DE/RU), Lernmodus (Spaced Repetition), Prüfungssimulation (33 Fragen, 60 Min.), Fehlertraining und durchsuchbarem Katalog
 - **Deutschkurs A1–B1:** 30 Lektionen mit Grammatik, ~400 Wörtern, Dialogen, 150+ Übungen und Sprachausgabe; Vokabeltrainer
-- **B1-Prüfung (DTZ):** Schreibaufgaben mit Musterlösungen, Sprechaufgaben
+- **B1-Prüfung (DTZ):** Hör- und Leseaufgaben, Schreibaufgaben mit Musterlösungen, Sprechaufgaben
+- **Lernplan:** Tagesziele bis zum Prüfungstermin, tägliche Erinnerung als Kalenderdatei (.ics)
+- **Lebenslauf-Generator:** ausführlicher Lebenslauf als Fließtext mit Lückenprüfung
+- **Kostenrechner** für die ganze Familie
+- **Ablaufdaten:** Warnung, bevor Pass oder Aufenthaltstitel ablaufen, mit Kalendererinnerung
+- **Installationsanleitung** beim ersten Aufruf, passend zu Gerät und Browser
 - **Voraussetzungs-Check** mit Fristenrechner (5 Jahre bzw. 3 Jahre bei deutschem Ehepartner)
 - **Unterlagen-Checkliste** nach Lebenssituation, druckbar
 - **Behörden & Kontakte:** Suche nach Ort/PLZ, alle 13 sächsischen Einbürgerungsbehörden, Beratung, Tests, Kurse
@@ -21,7 +26,7 @@ Lokal starten: `python3 -m http.server` und `http://localhost:8000` öffnen.
 ## Daten pflegen
 | Datei | Inhalt |
 |---|---|
-| `data/questions.json` | Fragenkatalog (unverändert, BAMF Stand 07.05.2025) + russische Übersetzung |
+| `data/questions.json` | Fragenkatalog (unverändert, BAMF Stand 07.05.2025) + russische Übersetzung + Erklärungen (`e`) |
 | `data/behoerden-sn.json` | Einbürgerungsbehörden Sachsen (`stand: "geprüft …"` = einzeln verifiziert) |
 | `data/info.json` | Schritte, Voraussetzungs-Check, Unterlagen, Kontakte, Briefe |
 | `data/kurs-a1/a2/b1.json` | Deutschkurs |
