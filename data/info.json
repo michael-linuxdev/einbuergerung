@@ -1,0 +1,603 @@
+{
+ "stand": "Oktober 2026",
+ "steps": [
+  {
+   "id": "s1",
+   "t": "Voraussetzungen prüfen",
+   "ru": "Проверить условия",
+   "d": "Mit dem Voraussetzungs-Check in dieser App ehrlich prüfen, wo du stehst. Die Behörde berät außerdem kostenlos und unverbindlich.",
+   "dru": "С помощью проверки условий в этом приложении честно оцените свою ситуацию. Ведомство также консультирует бесплатно и без обязательств.",
+   "go": "check"
+  },
+  {
+   "id": "s2",
+   "t": "Deutsch auf B1 bringen",
+   "ru": "Выучить немецкий до уровня B1",
+   "d": "Kurs A1 bis B1 in der App durcharbeiten, danach eine anerkannte B1-Prüfung ablegen (z. B. DTZ, Goethe, telc, ÖSD).",
+   "dru": "Пройдите курс A1–B1 в приложении, затем сдайте признанный экзамен B1 (например, DTZ, Goethe, telc, ÖSD).",
+   "go": "kurs"
+  },
+  {
+   "id": "s3",
+   "t": "Einbürgerungstest bestehen",
+   "ru": "Сдать тест на натурализацию",
+   "d": "Alle 310 Fragen (300 allgemein + 10 Sachsen) lernen, Prüfung simulieren, dann bei einer Volkshochschule anmelden (Gebühr 25 €).",
+   "dru": "Выучите все 310 вопросов (300 общих + 10 по Саксонии), пройдите пробный экзамен, затем запишитесь в народный университет (VHS), сбор 25 €.",
+   "go": "test"
+  },
+  {
+   "id": "s4",
+   "t": "Unterlagen sammeln",
+   "ru": "Собрать документы",
+   "d": "Urkunden aus dem Herkunftsland und beglaubigte Übersetzungen brauchen oft Monate. Früh anfangen!",
+   "dru": "Документы из страны происхождения и заверенные переводы часто занимают месяцы. Начинайте заранее!",
+   "go": "docs"
+  },
+  {
+   "id": "s5",
+   "t": "Behörde kontaktieren",
+   "ru": "Связаться с ведомством",
+   "d": "Zuständig ist das Landratsamt deines Landkreises bzw. in Chemnitz, Dresden und Leipzig die Stadtverwaltung. Viele Behörden prüfen zuerst per E-Mail die Voraussetzungen und schicken dann die Formulare.",
+   "dru": "Ответственно ведомство района (Landratsamt), а в Хемнице, Дрездене и Лейпциге — городская администрация. Многие ведомства сначала проверяют условия по e-mail, а затем высылают формы.",
+   "go": "amt"
+  },
+  {
+   "id": "s6",
+   "t": "Antrag stellen",
+   "ru": "Подать заявление",
+   "d": "Antrag schriftlich mit allen Nachweisen einreichen (bei manchen Behörden auch online). Ab 16 Jahren stellt man den Antrag selbst.",
+   "dru": "Подайте заявление письменно со всеми подтверждениями (в некоторых ведомствах также онлайн). С 16 лет заявление подаётся самостоятельно.",
+   "go": "docs"
+  },
+  {
+   "id": "s7",
+   "t": "Warten und erreichbar bleiben",
+   "ru": "Ждать и оставаться на связи",
+   "d": "Die Bearbeitung dauert oft ein Jahr oder länger (Landkreis Mittelsachsen nennt 12–15 Monate). Umzug, Jobwechsel oder neue Kinder der Behörde sofort melden.",
+   "dru": "Рассмотрение часто длится год и дольше (район Миттельзаксен указывает 12–15 месяцев). Сразу сообщайте ведомству о переезде, смене работы или рождении детей.",
+   "go": null
+  },
+  {
+   "id": "s8",
+   "t": "Urkunde & Bekenntnis",
+   "ru": "Свидетельство и обязательство",
+   "d": "Bei der persönlichen Übergabe der Einbürgerungsurkunde wird die Einbürgerung wirksam. Dazu gibt man ein feierliches Bekenntnis zur freiheitlichen demokratischen Grundordnung ab. Gebühr: 255 € pro Erwachsenem.",
+   "dru": "Натурализация вступает в силу при личном вручении свидетельства. При этом даётся торжественное обязательство соблюдать свободный демократический строй. Сбор: 255 € на взрослого.",
+   "go": null
+  },
+  {
+   "id": "s9",
+   "t": "Danach",
+   "ru": "После этого",
+   "d": "Personalausweis und Reisepass im Bürgeramt beantragen. Prüfen, ob dein Herkunftsland Meldepflichten zur zweiten Staatsangehörigkeit hat. Ab jetzt darfst du an allen Wahlen teilnehmen.",
+   "dru": "Оформите удостоверение личности и загранпаспорт в бюро по делам граждан. Проверьте, есть ли в вашей стране происхождения обязанность сообщать о втором гражданстве. Теперь вы можете участвовать во всех выборах.",
+   "go": null
+  }
+ ],
+ "check": [
+  {
+   "id": "aufenthalt",
+   "q": "Wie lange lebst du schon rechtmäßig und gewöhnlich in Deutschland?",
+   "ru": "Как долго вы законно и постоянно проживаете в Германии?",
+   "o": [
+    {
+     "t": "5 Jahre oder länger",
+     "ru": "5 лет или дольше",
+     "v": 2
+    },
+    {
+     "t": "3–5 Jahre und mit einer/einem Deutschen verheiratet (seit mind. 2 Jahren)",
+     "ru": "3–5 лет и в браке с гражданином(-кой) Германии (не менее 2 лет)",
+     "v": 2
+    },
+    {
+     "t": "3–5 Jahre, nicht mit Deutschen verheiratet",
+     "ru": "3–5 лет, не в браке с гражданином Германии",
+     "v": 1,
+     "hint": "Die Einbürgerung nach 3 Jahren für besondere Integrationsleistungen wurde zum 30.10.2025 abgeschafft. Du brauchst in der Regel 5 Jahre.",
+     "hru": "Натурализация через 3 года за особые интеграционные достижения отменена с 30.10.2025. Обычно нужно 5 лет."
+    },
+    {
+     "t": "weniger als 3 Jahre",
+     "ru": "менее 3 лет",
+     "v": 0,
+     "hint": "Nutze die Zeit für Deutsch und den Test – dann bist du startklar, sobald die Frist erfüllt ist.",
+     "hru": "Используйте это время для немецкого и теста — тогда вы будете готовы, как только истечёт срок."
+    }
+   ]
+  },
+  {
+   "id": "titel",
+   "q": "Welchen Aufenthaltsstatus hast du?",
+   "ru": "Какой у вас статус пребывания?",
+   "o": [
+    {
+     "t": "Niederlassungserlaubnis, Daueraufenthalt-EU oder EU-/EWR-/Schweizer Bürger",
+     "ru": "Бессрочный вид на жительство, ПМЖ ЕС или гражданин ЕС/ЕЭЗ/Швейцарии",
+     "v": 2
+    },
+    {
+     "t": "Befristete Aufenthaltserlaubnis für Arbeit/Familie, Blaue Karte EU, anerkannter Flüchtling",
+     "ru": "Срочный ВНЖ для работы/семьи, Голубая карта ЕС, признанный беженец",
+     "v": 2,
+     "hint": "Viele befristete Titel reichen, wenn sie auf Dauer angelegt sind. Lass es dir von der Behörde bestätigen.",
+     "hru": "Многие срочные виды на жительство подходят, если они рассчитаны на длительное пребывание. Уточните в ведомстве."
+    },
+    {
+     "t": "Vorübergehender Schutz (§ 24, z. B. Ukraine), Studium/Ausbildung",
+     "ru": "Временная защита (§ 24, например, Украина), учёба/профобучение",
+     "v": 1,
+     "hint": "Mit diesen Titeln besteht in der Regel kein Einbürgerungsanspruch. Ein Wechsel in einen anderen Titel (z. B. Arbeit) kann den Weg öffnen – lass dich beraten.",
+     "hru": "С такими видами на жительство права на натурализацию, как правило, нет. Переход на другой вид (например, для работы) может открыть путь — получите консультацию."
+    },
+    {
+     "t": "Duldung oder Aufenthaltsgestattung",
+     "ru": "Дульдунг (отсрочка депортации) или разрешение на время процедуры убежища",
+     "v": 0,
+     "hint": "Mit Duldung oder Gestattung ist keine Einbürgerung möglich.",
+     "hru": "При Duldung или Gestattung натурализация невозможна."
+    }
+   ]
+  },
+  {
+   "id": "geld",
+   "q": "Wie sicherst du deinen Lebensunterhalt (und den deiner Familie)?",
+   "ru": "Как вы обеспечиваете себя (и свою семью)?",
+   "o": [
+    {
+     "t": "Eigenes Einkommen, kein Bürgergeld/keine Sozialhilfe",
+     "ru": "Собственный доход, без Bürgergeld/социальной помощи",
+     "v": 2
+    },
+    {
+     "t": "Ich bekomme ergänzend Bürgergeld oder Sozialhilfe",
+     "ru": "Я получаю дополнительно Bürgergeld или социальную помощь",
+     "v": 0,
+     "hint": "Grundsätzlich muss der Lebensunterhalt ohne diese Leistungen gesichert sein. Es gibt eng begrenzte Ausnahmen (z. B. Vollzeitarbeit in 20 der letzten 24 Monate, ehemalige Gast-/Vertragsarbeitnehmer). Frag die Behörde.",
+     "hru": "В принципе, средства к существованию должны быть обеспечены без этих пособий. Есть узкие исключения (например, полная занятость 20 из последних 24 месяцев, бывшие гастарбайтеры/контрактные рабочие). Уточните в ведомстве."
+    },
+    {
+     "t": "Studium/Ausbildung, finanziert durch BAföG oder Familie",
+     "ru": "Учёба/профобучение, финансируемые BAföG или семьёй",
+     "v": 1,
+     "hint": "BAföG zählt nicht als Sozialhilfe. Lass dir den Einzelfall bestätigen.",
+     "hru": "BAföG не считается социальной помощью. Уточните ваш случай."
+    }
+   ]
+  },
+  {
+   "id": "deutsch",
+   "q": "Wie gut ist dein Deutsch?",
+   "ru": "Насколько хорошо вы знаете немецкий?",
+   "o": [
+    {
+     "t": "Ich habe ein B1-Zertifikat (oder höher) bzw. einen deutschen Schulabschluss",
+     "ru": "У меня есть сертификат B1 (или выше) либо немецкий школьный аттестат",
+     "v": 2
+    },
+    {
+     "t": "Ich lerne noch (A1–A2)",
+     "ru": "Я ещё учу (A1–A2)",
+     "v": 1,
+     "hint": "Der Deutschkurs in dieser App führt dich bis B1.",
+     "hru": "Курс немецкого в этом приложении доведёт вас до B1."
+    },
+    {
+     "t": "Ich spreche kaum Deutsch",
+     "ru": "Я почти не говорю по-немецки",
+     "v": 0,
+     "hint": "Starte mit Lektion A1.1 – jeden Tag 20 Minuten reichen für einen guten Anfang.",
+     "hru": "Начните с урока A1.1 — 20 минут в день достаточно для хорошего старта."
+    }
+   ]
+  },
+  {
+   "id": "test",
+   "q": "Einbürgerungstest „Leben in Deutschland“?",
+   "ru": "Тест на натурализацию «Жизнь в Германии»?",
+   "o": [
+    {
+     "t": "Bestanden (mind. 17 von 33) oder deutscher Schulabschluss",
+     "ru": "Сдан (не менее 17 из 33) или есть немецкий школьный аттестат",
+     "v": 2
+    },
+    {
+     "t": "Noch nicht gemacht",
+     "ru": "Ещё не сдавал(а)",
+     "v": 1,
+     "hint": "Lerne mit dem Testtrainer und mach die Simulation, bis du sicher über 25 Punkte liegst.",
+     "hru": "Учитесь с тренажёром и проходите симуляцию, пока уверенно не наберёте больше 25 баллов."
+    }
+   ]
+  },
+  {
+   "id": "straf",
+   "q": "Wurdest du wegen einer Straftat verurteilt?",
+   "ru": "Были ли вы осуждены за преступление?",
+   "o": [
+    {
+     "t": "Nein",
+     "ru": "Нет",
+     "v": 2
+    },
+    {
+     "t": "Ja, nur geringe Strafe (z. B. Geldstrafe bis 90 Tagessätze)",
+     "ru": "Да, только незначительное наказание (например, штраф до 90 дневных ставок)",
+     "v": 1,
+     "hint": "Geringe Strafen bleiben oft außer Betracht – außer bei antisemitischen, rassistischen oder anderen menschenverachtenden Motiven. Einzelfall mit der Behörde klären.",
+     "hru": "Незначительные наказания часто не учитываются — кроме случаев с антисемитскими, расистскими или иными человеконенавистническими мотивами. Уточните в ведомстве."
+    },
+    {
+     "t": "Ja, höhere Strafe",
+     "ru": "Да, более серьёзное наказание",
+     "v": 0,
+     "hint": "Das kann die Einbürgerung ausschließen. Bitte lass dich individuell beraten (z. B. Migrationsberatung).",
+     "hru": "Это может исключить натурализацию. Получите индивидуальную консультацию (например, в миграционной консультации)."
+    }
+   ]
+  },
+  {
+   "id": "fdgo",
+   "q": "Kannst du dich zur freiheitlichen demokratischen Grundordnung bekennen – inkl. Deutschlands historischer Verantwortung (Schutz jüdischen Lebens) und der Gleichberechtigung von Mann und Frau?",
+   "ru": "Готовы ли вы заявить о приверженности свободному демократическому строю — включая историческую ответственность Германии (защита еврейской жизни) и равноправие мужчин и женщин?",
+   "o": [
+    {
+     "t": "Ja",
+     "ru": "Да",
+     "v": 2
+    },
+    {
+     "t": "Ich bin unsicher, was das bedeutet",
+     "ru": "Я не уверен(а), что это значит",
+     "v": 1,
+     "hint": "Die Testfragen zu „Politik in der Demokratie“ und „Geschichte und Verantwortung“ erklären es. Die Behörde liest dir die Erklärung auch vor.",
+     "hru": "Вопросы теста о «Политике в демократии» и «Истории и ответственности» это объясняют. Ведомство также зачитает вам заявление."
+    }
+   ]
+  },
+  {
+   "id": "pass",
+   "q": "Ist deine Identität geklärt (gültiger Pass, Geburtsurkunde)?",
+   "ru": "Установлена ли ваша личность (действующий паспорт, свидетельство о рождении)?",
+   "o": [
+    {
+     "t": "Ja, Pass und Urkunden vorhanden",
+     "ru": "Да, паспорт и документы есть",
+     "v": 2
+    },
+    {
+     "t": "Teilweise / schwer zu beschaffen",
+     "ru": "Частично / трудно получить",
+     "v": 1,
+     "hint": "Ohne geklärte Identität keine Einbürgerung. Es gibt aber andere Nachweise, wenn Urkunden objektiv nicht zu bekommen sind – frühzeitig mit der Behörde besprechen.",
+     "hru": "Без установленной личности натурализация невозможна. Но если документы объективно получить нельзя, есть иные способы подтверждения — обсудите заранее с ведомством."
+    }
+   ]
+  }
+ ],
+ "docs": [
+  {
+   "g": "Für alle",
+   "gru": "Для всех",
+   "items": [
+    {
+     "id": "d_antrag",
+     "t": "Antragsformular (von deiner Einbürgerungsbehörde), unterschrieben",
+     "ru": "Бланк заявления (от вашего ведомства по натурализации), подписанный"
+    },
+    {
+     "id": "d_foto",
+     "t": "Aktuelles biometrisches Passfoto",
+     "ru": "Актуальное биометрическое фото"
+    },
+    {
+     "id": "d_pass",
+     "t": "Gültiger Nationalpass (oder Reiseausweis)",
+     "ru": "Действующий национальный паспорт (или проездной документ)"
+    },
+    {
+     "id": "d_titel",
+     "t": "Aufenthaltstitel / eAT-Karte (entfällt für EU-Bürger)",
+     "ru": "Вид на жительство / карта eAT (не нужен гражданам ЕС)"
+    },
+    {
+     "id": "d_sta",
+     "t": "Nachweis der jetzigen Staatsangehörigkeit(en), ggf. frühere",
+     "ru": "Подтверждение нынешнего гражданства (гражданств), при необходимости прежнего"
+    },
+    {
+     "id": "d_geburt",
+     "t": "Geburtsurkunde (mit Übersetzung)",
+     "ru": "Свидетельство о рождении (с переводом)",
+     "tip": "Ausländische Urkunden: Übersetzung durch öffentlich bestellte, beeidigte Übersetzer. Bei kyrillischer Schrift oft zusätzlich Transliteration nach ISO 9. Je nach Land zusätzlich Apostille oder Legalisation nötig.",
+     "tru": "Иностранные документы: перевод присяжным переводчиком. Для кириллицы часто дополнительно транслитерация по ISO 9. В зависимости от страны дополнительно нужен апостиль или легализация."
+    },
+    {
+     "id": "d_lebenslauf",
+     "t": "Lebenslauf auf Deutsch (lückenlos ab Geburt: Familie, Schule, Ausbildung, Arbeit, Wohnorte)",
+     "ru": "Автобиография на немецком (без пробелов с рождения: семья, школа, учёба, работа, места жительства)",
+     "tip": "Form hängt von der Behörde ab: Das Landratsamt Pirna (auch für Freital) verlangt einen ausführlichen Lebenslauf als Fließtext, nicht tabellarisch.",
+     "tru": "Форма зависит от ведомства: Ландратсамт Пирны (также для Фрайталя) требует подробную автобиографию связным текстом, не в виде таблицы."
+    },
+    {
+     "id": "d_melde",
+     "t": "Meldebescheinigung / Wohnungsnachweis (Mietvertrag)",
+     "ru": "Справка о регистрации / подтверждение жилья (договор аренды)"
+    },
+    {
+     "id": "d_b1",
+     "t": "Sprachnachweis B1 (Zertifikat) oder deutscher Schulabschluss",
+     "ru": "Подтверждение B1 (сертификат) или немецкий школьный аттестат"
+    },
+    {
+     "id": "d_lid",
+     "t": "Zertifikat Einbürgerungstest / „Leben in Deutschland“",
+     "ru": "Сертификат теста на натурализацию / «Жизнь в Германии»"
+    },
+    {
+     "id": "d_kv",
+     "t": "Nachweis Krankenversicherung",
+     "ru": "Подтверждение медицинской страховки"
+    }
+   ]
+  },
+  {
+   "g": "Familie",
+   "gru": "Семья",
+   "items": [
+    {
+     "id": "d_heirat",
+     "t": "Heirats- oder Lebenspartnerschaftsurkunde",
+     "ru": "Свидетельство о браке или партнёрстве"
+    },
+    {
+     "id": "d_scheidung",
+     "t": "ggf. Scheidungsurteil mit Rechtskraftvermerk / Sterbeurkunde",
+     "ru": "при необходимости решение о разводе с отметкой о вступлении в силу / свидетельство о смерти"
+    },
+    {
+     "id": "d_kinder",
+     "t": "Geburtsurkunden der Kinder",
+     "ru": "Свидетельства о рождении детей"
+    },
+    {
+     "id": "d_partner",
+     "t": "Bei deutschem Ehepartner: dessen Personalausweis/Pass (Kopie)",
+     "ru": "При супруге-немце: копия его/её удостоверения личности/паспорта"
+    }
+   ]
+  },
+  {
+   "g": "Angestellt",
+   "gru": "Наёмный работник",
+   "persona": "angestellt",
+   "items": [
+    {
+     "id": "d_av",
+     "t": "Arbeitsvertrag und Arbeitgeberbescheinigung",
+     "ru": "Трудовой договор и справка от работодателя"
+    },
+    {
+     "id": "d_lohn",
+     "t": "Letzte Gehaltsabrechnungen (meist 3–6 Monate)",
+     "ru": "Последние расчётные листки (обычно за 3–6 месяцев)"
+    },
+    {
+     "id": "d_drv",
+     "t": "Versicherungsverlauf der Deutschen Rentenversicherung",
+     "ru": "Выписка о страховом стаже из Немецкого пенсионного страхования",
+     "tip": "Kostenlos online oder telefonisch bei der DRV anfordern.",
+     "tru": "Бесплатно запросить онлайн или по телефону в DRV."
+    }
+   ]
+  },
+  {
+   "g": "Selbständig",
+   "gru": "Самозанятый",
+   "persona": "selbst",
+   "items": [
+    {
+     "id": "d_est",
+     "t": "Letzte Einkommensteuerbescheide (meist 2–3 Jahre)",
+     "ru": "Последние налоговые уведомления (обычно за 2–3 года)"
+    },
+    {
+     "id": "d_gewerbe",
+     "t": "Gewerbeanmeldung bzw. Nachweis der freiberuflichen Tätigkeit",
+     "ru": "Регистрация промысла или подтверждение свободной профессии"
+    },
+    {
+     "id": "d_bwa",
+     "t": "Aktuelle BWA vom Steuerberater",
+     "ru": "Актуальный бизнес-отчёт (BWA) от налогового консультанта"
+    },
+    {
+     "id": "d_vorsorge",
+     "t": "Nachweise Altersvorsorge, Kranken- und Pflegeversicherung",
+     "ru": "Подтверждения пенсионных накоплений, медицинского страхования и страхования по уходу"
+    }
+   ]
+  },
+  {
+   "g": "Studium / Ausbildung",
+   "gru": "Учёба / профобучение",
+   "persona": "studium",
+   "items": [
+    {
+     "id": "d_schule",
+     "t": "Immatrikulations- oder Schul-/Ausbildungsbescheinigung",
+     "ru": "Справка из вуза, школы или с места обучения"
+    },
+    {
+     "id": "d_bafoeg",
+     "t": "ggf. BAföG-Bescheid bzw. Unterhaltsnachweis",
+     "ru": "при необходимости решение о BAföG или подтверждение содержания"
+    }
+   ]
+  },
+  {
+   "g": "Rente",
+   "gru": "Пенсия",
+   "persona": "rente",
+   "items": [
+    {
+     "id": "d_rente",
+     "t": "Aktueller Rentenbescheid",
+     "ru": "Актуальное решение о пенсии"
+    },
+    {
+     "id": "d_rkv",
+     "t": "Bestätigung Kranken- und Pflegeversicherung",
+     "ru": "Подтверждение медицинского страхования и страхования по уходу"
+    }
+   ]
+  },
+  {
+   "g": "Flüchtlinge / Staatenlose",
+   "gru": "Беженцы / лица без гражданства",
+   "persona": "fluechtling",
+   "items": [
+    {
+     "id": "d_bamf",
+     "t": "BAMF-Bescheid (Asyl/Flüchtlingseigenschaft)",
+     "ru": "Решение BAMF (убежище/статус беженца)"
+    },
+    {
+     "id": "d_reiseausweis",
+     "t": "Reiseausweis für Flüchtlinge bzw. Staatenlose",
+     "ru": "Проездной документ беженца или лица без гражданства"
+    }
+   ]
+  },
+  {
+   "g": "Vor dem Einreichen",
+   "gru": "Перед подачей",
+   "items": [
+    {
+     "id": "d_kopien",
+     "t": "Von allem Kopien machen – Originale zum Termin mitbringen",
+     "ru": "Сделать копии всего — оригиналы принести на приём"
+    },
+    {
+     "id": "d_ordner",
+     "t": "Ordner mit Inhaltsverzeichnis anlegen (Reihenfolge wie Checkliste)",
+     "ru": "Собрать папку с оглавлением (порядок как в чек-листе)"
+    },
+    {
+     "id": "d_gebuehr",
+     "t": "255 € pro Erwachsenem einplanen (51 € je miteingebürgertem Kind ohne Einkommen)",
+     "ru": "Заложить 255 € на взрослого (51 € на ребёнка без дохода при совместной натурализации)"
+    }
+   ]
+  }
+ ],
+ "kontakte": [
+  {
+   "g": "Amtlich & Information",
+   "items": [
+    {
+     "name": "Amt24 Sachsen – „Einbürgerungsantrag stellen“",
+     "d": "Offizielle Leistungsbeschreibung. Unter „Zuständige Stelle“ den Wohnort eingeben: dann siehst du Adresse, Telefon und ggf. den Onlinedienst deiner Behörde.",
+     "dru": "Официальное описание услуги. В разделе «Zuständige Stelle» введите место жительства — там адрес, телефон и при наличии онлайн-сервис вашего ведомства.",
+     "web": "https://amt24.sachsen.de/zufi/leistungen/6000849"
+    },
+    {
+     "name": "Einbürgerung im Freistaat Sachsen",
+     "d": "Infoportal des Sächsischen Staatsministeriums des Innern.",
+     "dru": "Информационный портал Министерства внутренних дел Саксонии.",
+     "web": "https://www.einbuergerung.sachsen.de"
+    },
+    {
+     "name": "BAMF – Einbürgerung & Online-Testcenter",
+     "d": "Offizielle Infos und der offizielle Übungstest des Bundesamts.",
+     "dru": "Официальная информация и официальный пробный тест Федерального ведомства.",
+     "web": "https://www.bamf.de/DE/Themen/Integration/ZugewanderteTeilnehmende/Einbuergerung/einbuergerung-node.html"
+    },
+    {
+     "name": "Sächsische Ausländerbeauftragte",
+     "d": "Ansprechstelle beim Sächsischen Landtag für Anliegen von Zugewanderten.",
+     "dru": "Уполномоченная по делам иностранцев при Саксонском ландтаге.",
+     "web": "https://sab.landtag.sachsen.de/de/einbuergerung-19092.cshtml"
+    }
+   ]
+  },
+  {
+   "g": "Tests & Kurse",
+   "items": [
+    {
+     "name": "Volkshochschulen in Sachsen",
+     "d": "Einbürgerungstest (25 €), Vorbereitungs- und Deutschkurse.",
+     "dru": "Тест на натурализацию (25 €), подготовительные курсы и курсы немецкого.",
+     "web": "https://www.vhs-sachsen.de"
+    },
+    {
+     "name": "BAMF-NAvI – Integrationskurse finden",
+     "d": "Integrationskurse (Sprachkurs bis B1 + Orientierungskurs) in deiner Nähe, oft mit Kostenbeteiligung des Bundes.",
+     "dru": "Интеграционные курсы (язык до B1 + ориентационный курс) рядом с вами, часто с участием государства в расходах.",
+     "web": "https://bamf-navi.bamf.de"
+    },
+    {
+     "name": "telc – Prüfungszentrum finden",
+     "d": "telc Deutsch B1 und Deutsch-Test für Zuwanderer (DTZ).",
+     "dru": "telc Deutsch B1 и тест для иммигрантов (DTZ).",
+     "web": "https://www.telc.net/pruefungsteilnehmende/pruefungszentrum-finden.html"
+    },
+    {
+     "name": "Goethe-Institut",
+     "d": "Goethe-Zertifikat B1 (Prüfungszentren in Dresden und Leipzig).",
+     "dru": "Сертификат Goethe B1 (экзаменационные центры в Дрездене и Лейпциге).",
+     "web": "https://www.goethe.de"
+    }
+   ]
+  },
+  {
+   "g": "Beratung (kostenlos)",
+   "items": [
+    {
+     "name": "Migrationsberatung für Erwachsene (MBE)",
+     "d": "Kostenlose Beratung zu Aufenthalt, Einbürgerung und Unterlagen – auch auf Russisch an vielen Orten. Suche über BAMF-NAvI.",
+     "dru": "Бесплатная консультация по вопросам пребывания, натурализации и документов — во многих местах также на русском. Поиск через BAMF-NAvI.",
+     "web": "https://bamf-navi.bamf.de"
+    },
+    {
+     "name": "Jugendmigrationsdienste (12–27 Jahre)",
+     "d": "Beratung für junge Zugewanderte.",
+     "dru": "Консультации для молодых мигрантов.",
+     "web": "https://www.jugendmigrationsdienste.de"
+    },
+    {
+     "name": "Deine Einbürgerungsbehörde",
+     "d": "Berät gebührenfrei und unverbindlich – auch ohne Antrag.",
+     "dru": "Консультирует бесплатно и без обязательств — даже без заявления.",
+     "go": "amt"
+    }
+   ]
+  }
+ ],
+ "briefe": [
+  {
+   "id": "b1",
+   "t": "Beratungstermin anfragen",
+   "ru": "Запросить консультацию",
+   "text": "Sehr geehrte Damen und Herren,\n\nich wohne seit [Monat/Jahr] in Deutschland und möchte mich einbürgern lassen. Ich bitte Sie um einen Beratungstermin oder um Informationen, welche Unterlagen ich einreichen soll.\n\nZu meiner Person:\n– Staatsangehörigkeit: [ ]\n– Aufenthaltstitel: [ ] (gültig bis [ ])\n– Familienstand: [ ], Kinder: [ ]\n– Beruf/Arbeitgeber: [ ]\n– Sprachnachweis: [B1-Zertifikat vom …]\n– Einbürgerungstest: [bestanden am … / geplant am …]\n\nIch bin unter [Telefon] und dieser E-Mail-Adresse erreichbar.\n\nMit freundlichen Grüßen\n[Vorname Nachname]\n[Adresse]\n[Geburtsdatum]"
+  },
+  {
+   "id": "b2",
+   "t": "Sachstandsanfrage",
+   "ru": "Запрос о статусе",
+   "text": "Sehr geehrte Damen und Herren,\n\nam [Datum] habe ich meinen Antrag auf Einbürgerung eingereicht (Aktenzeichen: [ ]). Ich möchte höflich nachfragen, ob noch Unterlagen fehlen und wie der aktuelle Stand meines Verfahrens ist.\n\nVielen Dank für Ihre Mühe.\n\nMit freundlichen Grüßen\n[Vorname Nachname]\n[Geburtsdatum]"
+  },
+  {
+   "id": "b3",
+   "t": "Änderung mitteilen (Umzug/Job)",
+   "ru": "Сообщить об изменениях (переезд/работа)",
+   "text": "Sehr geehrte Damen und Herren,\n\nin meinem Einbürgerungsverfahren (Aktenzeichen: [ ]) teile ich Ihnen folgende Änderung mit:\n[Ich bin am … umgezogen. Meine neue Adresse lautet: … / Ich habe zum … eine neue Stelle bei … angetreten.]\n\nDie entsprechenden Nachweise füge ich bei.\n\nMit freundlichen Grüßen\n[Vorname Nachname]"
+  },
+  {
+   "id": "b4",
+   "t": "Termin verschieben",
+   "ru": "Перенести встречу",
+   "text": "Sehr geehrte Damen und Herren,\n\nleider kann ich den Termin am [Datum] um [Uhrzeit] nicht wahrnehmen, weil [Grund]. Könnten Sie mir bitte einen neuen Termin vorschlagen? Ich kann [Tage/Zeiten].\n\nVielen Dank für Ihr Verständnis.\n\nMit freundlichen Grüßen\n[Vorname Nachname]"
+  }
+ ]
+}

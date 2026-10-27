@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Einbürgerung Sachsen</title>
+<meta name="description" content="Kostenlose Lern-App für die Einbürgerung in Sachsen: Einbürgerungstest mit allen 310 Fragen, Deutschkurs A1–B1, Unterlagen-Checkliste und Behördenkontakte. Mit russischen Erklärungen.">
+<meta name="theme-color" content="#1f5f4a" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1714" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Einbürgerung">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="shell">
+  <nav class="nav" aria-label="Hauptnavigation">
+    <a class="brand" href="#/start">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="2" width="28" height="28" rx="8" fill="currentColor"/><path d="M10 16.5l4 4 8-9" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Einbürgerung<small>Sachsen</small></span>
+    </a>
+    <a href="#/start" data-nav="start"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/></svg><span>Start</span></a>
+    <a href="#/test" data-nav="test"><svg viewBox="0 0 24 24"><path d="M9 4h6v3H9zM6 6h2v2h8V6h2a1 1 0 011 1v13a1 1 0 01-1 1H6a1 1 0 01-1-1V7a1 1 0 011-1zm2.5 9l2 2 4.5-4.5"/></svg><span>Test</span></a>
+    <a href="#/kurs" data-nav="kurs"><svg viewBox="0 0 24 24"><path d="M4 5h7a2 2 0 012 2v12a2 2 0 00-2-2H4zM20 5h-7a2 2 0 00-2 2v12a2 2 0 012-2h7z"/></svg><span>Deutsch</span></a>
+    <a href="#/docs" data-nav="docs"><svg viewBox="0 0 24 24"><path d="M7 3h7l5 5v12a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1zm7 0v5h5M9 13l2 2 4-4"/></svg><span>Unterlagen</span></a>
+    <a href="#/amt" data-nav="amt"><svg viewBox="0 0 24 24"><path d="M12 3l9 4H3zM5 9v9M10 9v9M14 9v9M19 9v9M3 21h18"/></svg><span>Behörden</span></a>
+    <a href="#/mehr" data-nav="mehr" class="only-mobile"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>Mehr</span></a>
+    <div class="nav-extra">
+      <a href="#/check" data-nav="check"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 110 18 9 9 0 010-18zm-4 9l3 3 5-6"/></svg><span>Voraussetzungen</span></a>
+      <a href="#/vokabeln" data-nav="vokabeln"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4zM8 10h8M8 14h5"/></svg><span>Vokabeln</span></a>
+      <a href="#/dtz" data-nav="dtz"><svg viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16zM14 6l3 3"/></svg><span>B1-Prüfung</span></a>
+      <a href="#/briefe" data-nav="briefe"><svg viewBox="0 0 24 24"><path d="M3 6h18v12H3zM3 7l9 6 9-6"/></svg><span>Briefvorlagen</span></a>
+      <a href="#/einstellungen" data-nav="einstellungen"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg><span>Einstellungen</span></a>
+    </div>
+  </nav>
+  <main id="app" tabindex="-1"><div class="loading">Lädt …</div></main>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="app.js" type="module"></script>
+</body>
+</html>

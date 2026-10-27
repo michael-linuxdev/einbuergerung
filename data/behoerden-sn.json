@@ -1,0 +1,285 @@
+{
+ "land": "SN",
+ "name": "Sachsen",
+ "regel": "In Chemnitz, Dresden und Leipzig ist die Stadtverwaltung zuständig, in allen anderen Orten das Landratsamt des Landkreises.",
+ "amt24": "https://amt24.sachsen.de/zufi/leistungen/6000849",
+ "behoerden": [
+  {
+   "id": "c",
+   "name": "Stadt Chemnitz",
+   "art": "Stadtverwaltung",
+   "sitz": "Chemnitz",
+   "web": "https://www.chemnitz.de",
+   "orte": [
+    "Chemnitz"
+   ],
+   "stand": "ungeprüft",
+   "hinweis": "Die genaue Abteilung, Telefonnummer und Sprechzeiten zeigt Amt24, wenn du dort deinen Wohnort eingibst."
+  },
+  {
+   "id": "dd",
+   "name": "Landeshauptstadt Dresden",
+   "art": "Stadtverwaltung – Abt. Staatsangehörigkeiten",
+   "sitz": "Dresden",
+   "web": "https://www.dresden.de/de/rathaus/dienstleistungen/einbuergerung_d115.php",
+   "orte": [
+    "Dresden"
+   ],
+   "stand": "ungeprüft",
+   "hinweis": "Die genaue Abteilung, Telefonnummer und Sprechzeiten zeigt Amt24, wenn du dort deinen Wohnort eingibst."
+  },
+  {
+   "id": "l",
+   "name": "Stadt Leipzig",
+   "art": "Stadtverwaltung – Ordnungsamt",
+   "sitz": "Leipzig",
+   "web": "https://www.leipzig.de",
+   "orte": [
+    "Leipzig"
+   ],
+   "stand": "ungeprüft",
+   "hinweis": "Die genaue Abteilung, Telefonnummer und Sprechzeiten zeigt Amt24, wenn du dort deinen Wohnort eingibst."
+  },
+  {
+   "id": "bz",
+   "name": "Landkreis Bautzen",
+   "art": "Landratsamt",
+   "sitz": "Bautzen",
+   "web": "https://www.landkreis-bautzen.de",
+   "orte": [
+    "Bautzen",
+    "Hoyerswerda",
+    "Kamenz",
+    "Radeberg",
+    "Bischofswerda",
+    "Ottendorf-Okrilla"
+   ],
+   "stand": "ungeprüft",
+   "hinweis": "Die genaue Abteilung, Telefonnummer und Sprechzeiten zeigt Amt24, wenn du dort deinen Wohnort eingibst."
+  },
+  {
+   "id": "erz",
+   "name": "Erzgebirgskreis",
+   "art": "Landratsamt",
+   "sitz": "Annaberg-Buchholz",
+   "web": "https://www.erzgebirgskreis.de",
+   "orte": [
+    "Annaberg-Buchholz",
+    "Aue-Bad Schlema",
+    "Marienberg",
+    "Stollberg",
+    "Schwarzenberg",
+    "Zschopau",
+    "Olbernhau"
+   ],
+   "stand": "ungeprüft",
+   "hinweis": "Die genaue Abteilung, Telefonnummer und Sprechzeiten zeigt Amt24, wenn du dort deinen Wohnort eingibst."
+  },
+  {
+   "id": "gr",
+   "name": "Landkreis Görlitz",
+   "art": "Landratsamt",
+   "sitz": "Görlitz",
+   "web": "https://www.kreis-goerlitz.de",
+   "orte": [
+    "Görlitz",
+    "Zittau",
+    "Löbau",
+    "Niesky",
+    "Weißwasser",
+    "Ebersbach-Neugersdorf"
+   ],
+   "stand": "ungeprüft",
+   "hinweis": "Die genaue Abteilung, Telefonnummer und Sprechzeiten zeigt Amt24, wenn du dort deinen Wohnort eingibst."
+  },
+  {
+   "id": "ll",
+   "name": "Landkreis Leipzig",
+   "art": "Landratsamt",
+   "sitz": "Borna",
+   "web": "https://www.landkreisleipzig.de",
+   "orte": [
+    "Borna",
+    "Grimma",
+    "Markkleeberg",
+    "Wurzen",
+    "Markranstädt",
+    "Zwenkau",
+    "Böhlen"
+   ],
+   "stand": "ungeprüft",
+   "hinweis": "Die genaue Abteilung, Telefonnummer und Sprechzeiten zeigt Amt24, wenn du dort deinen Wohnort eingibst."
+  },
+  {
+   "id": "mei",
+   "name": "Landkreis Meißen",
+   "art": "Landratsamt",
+   "sitz": "Meißen",
+   "web": "https://www.kreis-meissen.de",
+   "orte": [
+    "Meißen",
+    "Radebeul",
+    "Coswig",
+    "Riesa",
+    "Großenhain",
+    "Radeburg"
+   ],
+   "stand": "ungeprüft",
+   "hinweis": "Die genaue Abteilung, Telefonnummer und Sprechzeiten zeigt Amt24, wenn du dort deinen Wohnort eingibst."
+  },
+  {
+   "id": "fg",
+   "name": "Landkreis Mittelsachsen",
+   "art": "Landratsamt – Referat Allgemeine Ordnungsangelegenheiten",
+   "tel": [
+    "03731 799-3473",
+    "03731 799-3476",
+    "03731 799-3302",
+    "03731 799-3450"
+   ],
+   "mail": "personenstandswesen@landkreis-mittelsachsen.de",
+   "web": "https://www.landkreis-mittelsachsen.de/das-amt/buergerservice/einbuergerungen-beantragen.html",
+   "hinweis": "Voraussetzungen zuerst per E-Mail mitteilen, danach kommen die Formulare. Bearbeitungsdauer laut Landkreis 12–15 Monate.",
+   "orte": [
+    "Freiberg",
+    "Döbeln",
+    "Mittweida",
+    "Flöha",
+    "Burgstädt",
+    "Frankenberg/Sa.",
+    "Rochlitz"
+   ],
+   "stand": "geprüft 27.10.2026",
+   "adresse": "Frauensteiner Straße 43, 09599 Freiberg",
+   "sitz": "Freiberg",
+   "telZentrale": "03731 799-0"
+  },
+  {
+   "id": "tdo",
+   "name": "Landkreis Nordsachsen",
+   "art": "Landratsamt",
+   "sitz": "Torgau",
+   "web": "https://www.landkreis-nordsachsen.de",
+   "orte": [
+    "Torgau",
+    "Delitzsch",
+    "Eilenburg",
+    "Oschatz",
+    "Schkeuditz",
+    "Taucha",
+    "Bad Düben"
+   ],
+   "stand": "ungeprüft",
+   "hinweis": "Die genaue Abteilung, Telefonnummer und Sprechzeiten zeigt Amt24, wenn du dort deinen Wohnort eingibst."
+  },
+  {
+   "id": "pir",
+   "name": "Landkreis Sächsische Schweiz-Osterzgebirge",
+   "art": "Landratsamt – Sozial- und Ausländeramt, Abt. Staatsangehörigkeits- und Personenstandsangelegenheiten",
+   "sitz": "Pirna",
+   "web": "https://www.landratsamt-pirna.de/staatsangehoerigkeits-personenstandsangelegenheiten.html",
+   "orte": [
+    "Pirna",
+    "Freital",
+    "Heidenau",
+    "Dippoldiswalde",
+    "Sebnitz",
+    "Bad Schandau",
+    "Neustadt in Sachsen",
+    "Altenberg"
+   ],
+   "stand": "geprüft 27.10.2026",
+   "adresse": "Schloßhof 2/4 (Haus SF), 01796 Pirna",
+   "post": "Landkreis Sächsische Schweiz-Osterzgebirge, Postfach 10 02 53/54, 01782 Pirna",
+   "tel": [
+    "03501 515-4295",
+    "03501 515-4247"
+   ],
+   "telZentrale": "03501 515-0",
+   "mail": "personenstandswesen@landratsamt-pirna.de",
+   "zeiten": "Nur mit Termin. Mo 8–12, Di 8–12 & 13–18, Mi geschlossen, Do 8–12 & 13–18, Fr 8–12 Uhr",
+   "downloads": [
+    {
+     "t": "Liste der Nachweise im Einbürgerungsverfahren (PDF)",
+     "url": "https://www.landratsamt-pirna.de/download/Information_ueber_die_im_Einbuergerungsverfahren_beizubringenden_Nachweise.pdf"
+    }
+   ],
+   "aussen": [
+    "Freital: Dresdner Straße 107 und Deubener Straße 6, 01705 Freital",
+    "Dippoldiswalde: Weißeritzstraße 7, 01744 Dippoldiswalde",
+    "Sebnitz: Kirchstraße 5, 01855 Sebnitz"
+   ],
+   "hinweis": "Einbürgerungen werden zentral in Pirna bearbeitet – auch für Freital. Termin vorher vereinbaren. Den Antrag unterschreibt man erst beim Termin vor der Sachbearbeitung. Verlangt wird ein ausführlicher, NICHT tabellarischer Lebenslauf auf Deutsch. Personenstandsurkunden und Pass im Original mitbringen, ausländische Urkunden ggf. mit Apostille/Legalisation und beeidigter Übersetzung.",
+   "hru": "Натурализация оформляется централизованно в Пирне — в том числе для Фрайталя. Заранее запишитесь на приём. Заявление подписывается только на приёме в присутствии сотрудника. Требуется подробная автобиография на немецком в виде связного текста (НЕ таблицей). Документы гражданского состояния и паспорт — в оригинале; иностранные документы при необходимости с апостилем/легализацией и присяжным переводом.",
+   "plz": [
+    [
+     1705,
+     1855
+    ]
+   ],
+   "quellen": [
+    "https://www.landratsamt-pirna.de/staatsangehoerigkeits-personenstandsangelegenheiten.html",
+    "https://www.landratsamt-pirna.de/sozial-und-auslaenderamt.html"
+   ],
+   "extra": [
+    {
+     "name": "Ausländerbehörde (Aufenthaltstitel)",
+     "adresse": "Schloßhof 2/4, 01796 Pirna",
+     "tel": "03501 515-4250",
+     "mail": "auslaenderbehoerde@landratsamt-pirna.de",
+     "web": "https://www.landratsamt-pirna.de/auslaenderrecht.html"
+    },
+    {
+     "name": "Volkshochschule Sächsische Schweiz-Osterzgebirge (Einbürgerungstest, Deutschkurse)",
+     "adresse": "Geschwister-Scholl-Straße 2, 01796 Pirna",
+     "tel": "03501 710990",
+     "mail": "info@vhs-ssoe.de",
+     "web": "https://www.vhs-ssoe.de"
+    },
+    {
+     "name": "Stadtverwaltung Freital (Bürgerbüro: Meldebescheinigung, später Ausweis/Pass)",
+     "adresse": "Dresdner Straße 56, 01705 Freital",
+     "tel": "0351 6476-0",
+     "mail": "stadt@freital.de",
+     "web": "https://www.freital.de",
+     "zeiten": "Mo & Fr 8–12, Di & Do 8–12 und 14–18 Uhr, Mi geschlossen"
+    }
+   ]
+  },
+  {
+   "id": "v",
+   "name": "Vogtlandkreis",
+   "art": "Landratsamt",
+   "sitz": "Plauen",
+   "web": "https://www.vogtlandkreis.de",
+   "orte": [
+    "Plauen",
+    "Reichenbach im Vogtland",
+    "Auerbach/Vogtl.",
+    "Oelsnitz/Vogtl.",
+    "Markneukirchen",
+    "Klingenthal"
+   ],
+   "stand": "ungeprüft",
+   "hinweis": "Die genaue Abteilung, Telefonnummer und Sprechzeiten zeigt Amt24, wenn du dort deinen Wohnort eingibst."
+  },
+  {
+   "id": "z",
+   "name": "Landkreis Zwickau",
+   "art": "Landratsamt",
+   "sitz": "Zwickau",
+   "web": "https://www.landkreis-zwickau.de",
+   "orte": [
+    "Zwickau",
+    "Glauchau",
+    "Werdau",
+    "Crimmitschau",
+    "Limbach-Oberfrohna",
+    "Meerane",
+    "Hohenstein-Ernstthal"
+   ],
+   "stand": "ungeprüft",
+   "hinweis": "Die genaue Abteilung, Telefonnummer und Sprechzeiten zeigt Amt24, wenn du dort deinen Wohnort eingibst."
+  }
+ ]
+}
