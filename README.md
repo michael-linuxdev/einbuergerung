@@ -13,6 +13,13 @@ Kostenlose, offline-fähige Web-App (PWA) für Smartphone und Tablet, die auf di
 - **Kostenrechner** für die ganze Familie
 - **Ablaufdaten:** Warnung, bevor Pass oder Aufenthaltstitel ablaufen, mit Kalendererinnerung
 - **Installationsanleitung** beim ersten Aufruf, passend zu Gerät und Browser
+- **Tagesziel und Lerntage am Stück**, Fortschritt als Stempel (A1 bis Urkunde)
+- **Themen-Statistik:** wo die meisten Fehler passieren, mit gezieltem Training
+- **Audio-Modus:** Fragen, Antworten und Erklärungen vorlesen lassen
+- **Wörterbuch zum Antippen:** schwierige Begriffe in den Testfragen mit russischer Erklärung
+- **Mitbring-Listen** für Test, B1-Prüfung, Behördentermin und Urkundenübergabe
+- **Familienmodus:** mehrere Profile, gemeinsame Unterlagenliste
+- **Sicheres Speichern:** automatisch in localStorage und IndexedDB, dauerhafter Speicher angefragt, tägliche Sicherungspunkte (7 Tage), Sicherungsdatei
 - **Voraussetzungs-Check** mit Fristenrechner (5 Jahre bzw. 3 Jahre bei deutschem Ehepartner)
 - **Unterlagen-Checkliste** nach Lebenssituation, druckbar
 - **Behörden & Kontakte:** Suche nach Ort/PLZ, alle 13 sächsischen Einbürgerungsbehörden, Beratung, Tests, Kurse
@@ -30,7 +37,8 @@ Lokal starten: `python3 -m http.server` und `http://localhost:8000` öffnen.
 | `data/behoerden-sn.json` | Einbürgerungsbehörden Sachsen (`stand: "geprüft …"` = einzeln verifiziert) |
 | `data/info.json` | Schritte, Voraussetzungs-Check, Unterlagen, Kontakte, Briefe |
 | `data/kurs-a1/a2/b1.json` | Deutschkurs |
-| `data/dtz.json` | B1-Prüfungsaufgaben |
+| `data/dtz.json` | B1-Prüfungsaufgaben (Hören, Lesen, Schreiben, Sprechen) |
+| `data/glossar.json` | Wörterbuch: Begriff, Wortformen (`f`), Erklärung DE/RU |
 
 **Weitere Bundesländer:** je Land eine Datei `data/behoerden-<kürzel>.json` im gleichen Schema anlegen und die 10 Landesfragen aus dem BAMF-Katalog ergänzen.
 
@@ -41,5 +49,6 @@ Lokal starten: `python3 -m http.server` und `http://localhost:8000` öffnen.
 - Russische Fragen-Übersetzung: [lezeroq/lebenindeutschland](https://github.com/lezeroq/lebenindeutschland) (MIT).
 - Bilder: [JadRizk/einbuergerungstest-trainer](https://github.com/JadRizk/einbuergerungstest-trainer).
 - Behördendaten: Websites der Landratsämter und des Freistaates Sachsen (Stand Oktober 2026).
+- Schrift: Lora (SIL Open Font License 1.1), unverändert in `fonts/`.
 
 Keine Rechtsberatung. Kein Angebot des BAMF oder einer Behörde.

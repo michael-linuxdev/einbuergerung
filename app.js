@@ -1,25 +1,125 @@
 // Einbürgerung Sachsen – Lern-App (PWA). Vanilla JS, keine Abhängigkeiten.
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 const $app = document.getElementById('app');
 const DAY = 86400000;
 
 /* ---------- Zustand (lokal im Browser) ---------- */
 const KEY = 'eb.v1';
 const defaults = { ru: true, theme: 'auto', size: 'm', srs: {}, wrong: {}, exams: [], kurs: {}, vok: {}, docs: {}, persona: ['angestellt'], check: {}, amt: null, einreise: '', ehe: false, testdate: '', b1date: '', planTime: '19:00', cv: null, kosten: null, fristen: [{ id: 'pass', t: 'Reisepass', d: '' }, { id: 'titel', t: 'Aufenthaltstitel', d: '' }], installSeen: false };
+// Familienmodus: mehrere Profile; Unterlagen, Behörde, Kosten und Termin-Checklisten sind gemeinsam.
+const SHARED = ['docs', 'persona', 'amt', 'kosten', 'term', 'ru', 'theme', 'size', 'installSeen'];
+Object.assign(defaults, { daily: {}, stat: {}, milestones: {}, term: {} });
+/* ---------- Sicheres Speichern ----------
+   Jede Änderung geht sofort in localStorage UND IndexedDB (zweite Ablage).
+   Beim Start wird die neuere bzw. vorhandene Kopie genommen; täglich ein Sicherungspunkt (7 Tage). */
+const IDB = { db: null };
+function idbOpen() {
+  return new Promise(res => {
+    try { const r = indexedDB.open('einbuergerung', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => { IDB.db = r.result; res(r.result); }; r.onerror = () => res(null); r.onblocked = () => res(null); }
+    catch { res(null); }
+  });
+}
+const idbReq = (mode, fn) => new Promise(res => { if (!IDB.db) return res(undefined); try { const st = IDB.db.transaction('kv', mode).objectStore('kv'); const r = fn(st); r.onsuccess = () => res(r.result); r.onerror = () => res(undefined); } catch { res(undefined); } });
+const idbGet = k => idbReq('readonly', st => st.get(k));
+const idbPut = (k, v) => idbReq('readwrite', st => st.put(v, k));
+const idbDel = k => idbReq('readwrite', st => st.delete(k));
+const idbKeys = () => idbReq('readonly', st => st.getAllKeys());
+let saveWarned = false;
+const readJSON = (k, fb) => { try { return JSON.parse(localStorage.getItem(k) || 'null') ?? fb; } catch { return fb; } };
+function writeJSON(k, v, fresh = false) {
+  // fresh: neu angelegte Standardwerte bekommen Zeitstempel 0, damit eine ältere Sicherung in IndexedDB Vorrang hat
+  if (v && typeof v === 'object' && !Array.isArray(v)) v._ts = fresh ? 0 : Date.now();
+  let ok = true;
+  try { localStorage.setItem(k, JSON.stringify(v)); } catch { ok = false; }
+  idbPut(k, v).then(r => { if (!ok && r === undefined) saveFailed(); });
+  if (!ok && !IDB.db) saveFailed();
+}
+function saveFailed() {
+  if (saveWarned) return; saveWarned = true;
+  setTimeout(() => toast('Achtung: Speichern fehlgeschlagen. Bitte unter Einstellungen eine Sicherung herunterladen.'), 300);
+}
+async function restoreFromIDB() {
+  await idbOpen();
+  if (!IDB.db) return;
+  const keys = (await idbKeys() || []).filter(k => typeof k === 'string' && k.startsWith('eb.'));
+  let changed = false;
+  for (const k of keys) {
+    const fromDb = await idbGet(k), fromLs = readJSON(k, null);
+    if (fromDb && (!fromLs || (fromDb._ts || 0) > (fromLs._ts || 0))) { try { localStorage.setItem(k, JSON.stringify(fromDb)); } catch {} changed = true; }
+    else if (fromLs && !fromDb) idbPut(k, fromLs);
+  }
+  for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('eb.') && !keys.includes(k)) { const v = readJSON(k, null); if (v) idbPut(k, v); } }
+  if (changed) { P = readJSON('eb.profiles', P); S = load(); }
+  // täglicher Sicherungspunkt
+  const today = 'snap:' + dayKey();
+  if (!(await idbGet(today)) && (S.exams.length || Object.keys(S.srs).length || Object.keys(S.kurs).length)) {
+    await idbPut(today, fullBackup());
+    const snaps = (await idbKeys() || []).filter(k => /^snap:\d{4}-/.test(String(k))).sort();
+    for (const k of snaps.slice(0, Math.max(0, snaps.length - 7))) await idbDel(k);
+  }
+  try { if (navigator.storage?.persist && !(await navigator.storage.persisted())) await navigator.storage.persist(); } catch {}
+}
+function fullBackup() {
+  save();
+  const data = { v: 2, created: new Date().toISOString(), profiles: P, shared: readJSON('eb.shared', {}), own: {} };
+  P.list.forEach(p => { data.own[p.id] = readJSON(pKey(p.id), {}); });
+  return data;
+}
+function restoreBackup(b) {
+  if (b && b.v === 2) {
+    writeJSON('eb.profiles', b.profiles); writeJSON('eb.shared', b.shared);
+    Object.entries(b.own).forEach(([id, v]) => writeJSON(pKey(id), v));
+    P = b.profiles;
+  } else if (b && typeof b === 'object') { // alte Sicherungsdatei (Version 1)
+    S = Object.assign({}, defaults, b); save(); return;
+  } else throw new Error('ungültig');
+  S = load();
+}
+addEventListener('pagehide', () => save());
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') save(); });
+addEventListener('storage', e => { if (e.key && e.key.startsWith('eb.')) { P = readJSON('eb.profiles', P); S = load(); } });
+let P = readJSON('eb.profiles', null);
+if (!P) { P = { active: 'p1', list: [{ id: 'p1', name: '' }] }; writeJSON('eb.profiles', P, true); }
+const pKey = id => id === 'p1' ? KEY : `${KEY}.${id}`;
 let S = load();
 function load() {
-  try { return Object.assign({}, defaults, JSON.parse(localStorage.getItem(KEY) || '{}')); }
-  catch { return Object.assign({}, defaults); }
+  const own = readJSON(pKey(P.active), {});
+  let shared = readJSON('eb.shared', null);
+  if (!shared) { shared = {}; const first = readJSON(KEY, {}); SHARED.forEach(k => { if (k in first) shared[k] = first[k]; }); writeJSON('eb.shared', shared, true); }
+  return Object.assign({}, defaults, own, shared);
 }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} }
+function save() {
+  const own = {}, shared = {};
+  for (const k in S) (SHARED.includes(k) ? shared : own)[k] = S[k];
+  writeJSON(pKey(P.active), own); writeJSON('eb.shared', shared);
+}
+const profileName = () => P.list.find(p => p.id === P.active)?.name || '';
+function switchProfile(id) { save(); P.active = id; writeJSON('eb.profiles', P); S = load(); applyPrefs(); }
+
+/* Lernaktivität: Tagesziel und Lerntage am Stück */
+const dayKey = (t = Date.now()) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+function activity(n = 1) { const k = dayKey(); S.daily[k] = (S.daily[k] || 0) + n; save(); }
+function streak() {
+  let n = 0, t = Date.now();
+  if (!S.daily[dayKey(t)]) t -= DAY; // heute noch nicht gelernt: Serie zählt bis gestern
+  while (S.daily[dayKey(t)]) { n++; t -= DAY; }
+  return n;
+}
+function dailyGoal() { const p = typeof planData === 'function' && S.testdate ? planData() : null; return Math.max(10, Math.min(40, p && p.tDays > 0 ? p.qPerDay + 5 : 20)); }
+function statAdd(id, ok) { const s = S.stat[id] || { r: 0, w: 0 }; ok ? s.r++ : s.w++; S.stat[id] = s; }
 
 /* ---------- Daten ---------- */
 const D = {};
 async function boot() {
-  const files = ['questions', 'info', 'behoerden-sn', 'kurs-a1', 'kurs-a2', 'kurs-b1', 'dtz'];
+  await restoreFromIDB();
+  const files = ['questions', 'info', 'behoerden-sn', 'kurs-a1', 'kurs-a2', 'kurs-b1', 'dtz', 'glossar'];
   const res = await Promise.all(files.map(f => fetch(`data/${f}.json`).then(r => r.json())));
   D.q = res[0].questions; D.qmeta = res[0].meta; D.info = res[1]; D.amt = res[2];
-  D.kurs = [...res[3], ...res[4], ...res[5]]; D.dtz = res[6];
+  D.kurs = [...res[3], ...res[4], ...res[5]]; D.dtz = res[6]; D.glossar = res[7];
+  D.topics = [...new Set(D.q.map(q => q.t))];
+  const forms = D.glossar.flatMap((g, k) => g.f.map(f => [f, k])).sort((a, b) => b[0].length - a[0].length);
+  D.gIndex = Object.fromEntries(forms.map(([f, k]) => [f.toLowerCase(), k]));
+  D.gRe = new RegExp(`(?<![\\p{L}])(${forms.map(([f]) => f.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})(?![\\p{L}])`, 'giu');
   D.qById = Object.fromEntries(D.q.map(q => [q.id, q]));
   D.general = D.q.filter(q => q.id.startsWith('g'));
   D.state = D.q.filter(q => q.id.startsWith('SN'));
@@ -79,9 +179,12 @@ function route() {
   if ('speechSynthesis' in window) speechSynthesis.cancel();
   const parts = (decodeURIComponent(location.hash).replace(/^#\/?/, '') || 'start').split(/--|\//);
   const [p, a, b] = parts;
-  document.querySelectorAll('[data-nav]').forEach(n => n.classList.toggle('active', n.dataset.nav === p || (p === 'lernen' && n.dataset.nav === 'test') || (['pruefung', 'katalog'].includes(p) && n.dataset.nav === 'test') || (p === 'lektion' && n.dataset.nav === 'kurs')));
-  const views = { start, test, lernen, pruefung, katalog, kurs, lektion, vokabeln, dtz, docs, amt, check, briefe, einstellungen, mehr, plan, lebenslauf, kosten, fristen, installieren };
+  const parent = { lernen: 'test', pruefung: 'test', katalog: 'test', audio: 'test', glossar: 'test', lektion: 'kurs', vokabeln: 'kurs', dtz: 'kurs' }[p];
+  const extra = ['check', 'plan', 'lebenslauf', 'kosten', 'fristen', 'termine', 'briefe', 'installieren', 'profil', 'einstellungen'].includes(p);
+  document.querySelectorAll('[data-nav]').forEach(n => n.classList.toggle('active', n.dataset.nav === p || n.dataset.nav === parent || (extra && n.dataset.nav === 'mehr' && innerWidth < 900)));
+  const views = { start, test, lernen, pruefung, katalog, kurs, lektion, vokabeln, dtz, docs, amt, check, briefe, einstellungen, mehr, plan, lebenslauf, kosten, fristen, installieren, audio, termine, glossar, profil };
   (views[p] || start)(a, b);
+  closePop();
   window.scrollTo(0, 0);
   $app.focus({ preventScroll: true });
 }
@@ -99,37 +202,6 @@ function stepDone(id) {
     default: return false;
   }
 }
-function start() {
-  const qL = learned(S.srs, D.q.map(q => q.id));
-  const kD = D.kurs.filter(l => S.kurs[l.id]?.done).length;
-  const docsItems = visibleDocs().flatMap(g => g.items);
-  const dD = docsItems.filter(i => S.docs[i.id]).length;
-  const best = S.exams.length ? Math.max(...S.exams.map(e => e.score)) : null;
-  const next = D.kurs.find(l => !S.kurs[l.id]?.done);
-  const due = D.q.filter(q => S.srs[q.id] && S.srs[q.id].due <= Date.now()).length;
-  let frist = '';
-  if (S.einreise) {
-    const d = new Date(S.einreise); d.setFullYear(d.getFullYear() + (S.ehe ? 3 : 5));
-    const days = Math.ceil((d - Date.now()) / DAY);
-    frist = days <= 0 ? `<span class="badge ok">Aufenthaltsdauer erfüllt</span>` : `<span class="badge warn">Frühestens ab ${fmtDate(d)} (noch ${days} Tage)</span>`;
-  }
-  render(`
-    <h1>Dein Weg zur Einbürgerung</h1>
-    <p class="muted">Freistaat Sachsen · alles kostenlos und offline nutzbar${ru('Свободное государство Саксония · всё бесплатно и доступно офлайн')}</p>
-    <div class="grid three">
-      <a class="tile" href="#test"><div class="meta">Einbürgerungstest</div><div class="stat">${qL}<span class="small muted"> / 310</span></div>${bar(pct(qL, 310))}<div class="meta" style="margin-top:6px">${due ? `${due} Fragen fällig` : 'Fragen gelernt'}${best !== null ? ` · Bestwert ${best}/33` : ''}</div></a>
-      <a class="tile" href="#kurs"><div class="meta">Deutschkurs A1–B1</div><div class="stat">${kD}<span class="small muted"> / ${D.kurs.length}</span></div>${bar(pct(kD, D.kurs.length))}<div class="meta" style="margin-top:6px">${next ? 'Weiter: ' + esc(next.id.toUpperCase().replace('-', '.')) + ' ' + esc(next.t) : 'Alle Lektionen fertig!'}</div></a>
-      <a class="tile" href="#docs"><div class="meta">Unterlagen</div><div class="stat">${dD}<span class="small muted"> / ${docsItems.length}</span></div>${bar(pct(dD, docsItems.length))}<div class="meta" style="margin-top:6px">abgehakt</div></a>
-    </div>
-    ${frist ? `<div class="card flat" style="margin-top:14px"><b>Aufenthaltsdauer:</b> ${frist}</div>` : `<a class="card flat" style="display:block;margin-top:14px;text-decoration:none;color:inherit" href="#check"><b>Wann darfst du den Antrag stellen?</b> Datum eingeben im Voraussetzungs-Check ›${ru('Когда можно подавать заявление? Введите дату в проверке условий')}</a>`}
-    ${todayCard()}${fristWarnings()}
-    <h2 style="margin-top:22px">Schritt für Schritt</h2>
-    <div class="card"><ol class="steps">
-      ${D.info.steps.map(s => `<li class="${stepDone(s.id) ? 'done' : ''}"><b>${esc(s.t)}</b>${ru(s.ru)}<div class="small" style="margin-top:4px">${esc(s.d)}</div>${ru(s.dru)}${s.go ? `<a class="btn small" style="margin-top:8px" href="#${s.go}">Öffnen</a>` : ''}</li>`).join('')}
-    </ol></div>
-    <p class="small muted">Inhalte: Stand ${esc(D.info.stand)}. Keine Rechtsberatung – verbindlich ist die Auskunft deiner Einbürgerungsbehörde.</p>
-  `);
-}
 
 function mehr() {
   render(`<h1>Mehr</h1><div class="grid">
@@ -140,6 +212,10 @@ function mehr() {
        ['lebenslauf', 'Lebenslauf-Generator', 'Генератор автобиографии', 'Ausführlicher Lebenslauf als Text für den Antrag'],
        ['kosten', 'Kostenrechner', 'Калькулятор расходов', 'Was die Einbürgerung für deine Familie kostet'],
        ['fristen', 'Ablaufdaten', 'Сроки документов', 'Warnung, bevor Pass oder Aufenthaltstitel ablaufen'],
+       ['termine', 'Was mitbringen?', 'Что взять с собой?', 'Listen für Test, B1-Prüfung und Behördentermin'],
+       ['audio', 'Audio-Modus', 'Аудиорежим', 'Fragen vorlesen lassen – für unterwegs'],
+       ['glossar', 'Wörterbuch', 'Словарь', 'Schwierige Begriffe auf Russisch erklärt'],
+       ['profil', 'Familienmodus', 'Семейный режим', 'Mehrere Personen auf einem Gerät'],
        ['briefe', 'Briefvorlagen', 'Шаблоны писем', 'An die Behörde schreiben – zum Kopieren'],
        ['installieren', 'Als App installieren', 'Установить как приложение', 'Anleitung für iPhone, iPad und Android'],
        ['einstellungen', 'Einstellungen & Infos', 'Настройки и информация', 'Russisch, Schriftgröße, Sicherung, Quellen']]
@@ -164,8 +240,11 @@ function test() {
       <a class="tile" href="#lernen"><h3>Lernen</h3>${ru('Учить')}<div class="meta">Bis zu 20 Fragen: erst fällige Wiederholungen, dann neue. Falsche kommen wieder.</div><span class="arrow">›</span></a>
       <a class="tile" href="#pruefung"><h3>Prüfung simulieren</h3>${ru('Пробный экзамен')}<div class="meta">Wie im echten Test: 33 Fragen, 60 Minuten, Auswertung am Ende.</div><span class="arrow">›</span></a>
       <a class="tile" href="#lernen--fehler"><h3>Meine Fehler</h3>${ru('Мои ошибки')}<div class="meta">${wrong} Fragen zuletzt falsch beantwortet.</div><span class="arrow">›</span></a>
+      <a class="tile" href="#audio"><h3>Audio-Modus</h3>${ru('Аудиорежим')}<div class="meta">Fragen und Antworten vorlesen lassen – für unterwegs.</div><span class="arrow">›</span></a>
+      <a class="tile" href="#glossar"><h3>Wörterbuch</h3>${ru('Словарь')}<div class="meta">${D.glossar.length} schwierige Begriffe mit russischer Erklärung.</div><span class="arrow">›</span></a>
       <a class="tile" href="#katalog"><h3>Alle 310 Fragen</h3>${ru('Все 310 вопросов')}<div class="meta">Katalog mit Lösungen, Suche und Themenfilter.</div><span class="arrow">›</span></a>
     </div>
+    <div style="margin-top:14px">${statsCard()}</div>
     ${last.length ? `<h2 style="margin-top:20px">Letzte Simulationen</h2><div class="card"><ul class="list">${last.map(e => `<li class="row"><span>${fmtDate(e.date)}</span><span class="spacer"></span><b>${e.score}/${e.total}</b> <span class="badge ${e.score >= 17 ? 'ok' : 'bad'}">${e.score >= 17 ? 'bestanden' : 'nicht bestanden'}</span></li>`).join('')}</ul></div>` : ''}
   `);
 }
@@ -175,22 +254,23 @@ function qCard(q, { idx, total, sel = null, reveal = false, mode = '' } = {}) {
   return `
     <div class="card">
       <div class="q-head"><span>${q.id.startsWith('SN') ? 'Sachsen' : 'Frage'} ${q.n}${q.t && q.t !== 'Sachsen' ? ' · ' + esc(q.t) : ''}</span>${idx != null ? `<span>${idx + 1} / ${total}</span>` : ''}</div>
-      <div class="q-text">${esc(q.q)}${ru(q.ru)}</div>
+      <div class="q-text">${gloss(esc(q.q))}${ru(q.ru)}</div>
       ${q.img ? `<img class="q-img" src="${q.img}" alt="Abbildung zu Frage ${esc(q.n)}" loading="lazy">` : ''}
       <div class="opts">${q.o.map((o, i) => {
         let cls = '';
         if (reveal) { if (i === q.a) cls = 'right'; else if (i === sel) cls = 'wrong'; }
         else if (i === sel) cls = 'sel';
-        return `<button class="opt ${cls}" data-act="${mode}" data-i="${i}" ${reveal && mode !== 'exam' ? 'disabled' : ''}><span class="k">${ABC[i]}</span><span>${esc(o)}${ruOpts[i] && ruOpts[i] !== o ? ru(ruOpts[i]) : ''}</span></button>`;
+        return `<button class="opt ${cls}" data-act="${mode}" data-i="${i}" ${reveal && mode !== 'exam' ? 'disabled' : ''}><span class="k">${ABC[i]}</span><span>${gloss(esc(o))}${ruOpts[i] && ruOpts[i] !== o ? ru(ruOpts[i]) : ''}</span></button>`;
       }).join('')}</div>
-      ${reveal && q.e ? `<div class="tip" style="margin-top:12px"><b>Warum?</b> ${esc(q.e[0])}${ru(q.e[1])}</div>` : ''}
+      ${reveal && q.e ? `<div class="why"><b>WARUM?</b>${esc(q.e[0])}${ru(q.e[1])}</div>` : ''}
     </div>`;
 }
 
-function lernen(filter) {
+function lernen(filter, arg) {
   let pool;
   const now = Date.now();
   if (filter === 'sachsen') pool = shuffle(D.state);
+  else if (filter === 'thema') pool = shuffle(D.q.filter(q => q.t === D.topics[+arg])).sort((a, b) => topicWeak(b) - topicWeak(a)).slice(0, 20);
   else if (filter === 'fehler') pool = shuffle(D.q.filter(q => S.wrong[q.id]));
   else {
     const dueQ = D.q.filter(q => S.srs[q.id] && S.srs[q.id].due <= now).sort((a, b) => S.srs[a.id].due - S.srs[b.id].due);
@@ -206,7 +286,7 @@ function lernen(filter) {
     const q = queue[i];
     const revealed = sel !== null;
     render(`${back('#test', 'Test')}
-      <div class="row" style="margin-bottom:10px"><div style="flex:1">${bar(pct(i, queue.length))}</div><span class="small muted">${i + 1}/${queue.length}</span></div>
+      ${queue.length <= 40 ? `<div class="segs" aria-label="Fortschritt ${i + 1} von ${queue.length}">${queue.map((_, k) => `<i class="${k < i ? 'd' : ''}"></i>`).join('')}</div>` : `<div style="margin-bottom:12px">${bar(pct(i, queue.length))}</div>`}
       ${qCard(q, { sel, reveal: revealed, mode: 'learn' })}
       ${revealed ? `<div class="feedback ${sel === q.a ? 'ok' : 'bad'}">${sel === q.a ? 'Richtig!' : 'Leider falsch. Richtig ist ' + ABC[q.a] + '.'}${ru(sel === q.a ? 'Правильно!' : 'К сожалению, неверно. Правильный ответ: ' + ABC[q.a] + '.')}</div>
         <div class="row end" style="margin-top:14px"><button class="btn primary" data-act="next">Weiter</button></div>` : ''}`);
@@ -215,7 +295,7 @@ function lernen(filter) {
     const t = e.target.closest('[data-act]'); if (!t) return;
     if (t.dataset.act === 'learn') {
       const q = queue[i], sel = +t.dataset.i, ok = sel === q.a;
-      if (!(q.id in first)) { first[q.id] = ok; answered++; if (ok) right++; srsGrade(S.srs, q.id, ok); S.wrong[q.id] = !ok; save(); }
+      if (!(q.id in first)) { first[q.id] = ok; answered++; if (ok) right++; statAdd(q.id, ok); srsGrade(S.srs, q.id, ok); S.wrong[q.id] = !ok; activity(); }
       else if (ok && filter === 'fehler') { S.wrong[q.id] = false; save(); }
       if (!ok) queue.push(q); // kommt in derselben Runde wieder
       show(sel);
@@ -223,8 +303,8 @@ function lernen(filter) {
       i++;
       if (i >= queue.length) {
         render(`${back('#test', 'Test')}<div class="card"><h2>Runde geschafft!</h2>${ru('Раунд пройден!')}<p class="stat">${right} / ${answered}</p><p class="muted">beim ersten Versuch richtig</p>
-          <div class="row"><a class="btn primary" href="#lernen${filter ? '--' + filter : ''}" data-act="again">Noch eine Runde</a><a class="btn" href="#test">Übersicht</a></div></div>`);
-        $app.onclick = e2 => { if (e2.target.closest('[data-act="again"]')) { e2.preventDefault(); lernen(filter); } };
+          <div class="row"><a class="btn primary" href="#test" data-act="again">Noch eine Runde</a><a class="btn" href="#test">Übersicht</a></div></div>`);
+        $app.onclick = e2 => { if (e2.target.closest('[data-act="again"]')) { e2.preventDefault(); lernen(filter, arg); } };
       } else show();
     } else if (t.dataset.act === 'speak') speak(t.dataset.t);
   };
@@ -258,8 +338,8 @@ function pruefung() {
   function finish() {
     if (done) return; done = true; clearInterval(timer);
     const score = qs.filter((q, k) => ans[k] === q.a).length;
-    qs.forEach((q, k) => { if (ans[k] !== null) { S.wrong[q.id] = ans[k] !== q.a; if (ans[k] !== q.a) srsGrade(S.srs, q.id, false); } });
-    S.exams.push({ date: Date.now(), score, total: 33 }); save();
+    qs.forEach((q, k) => { if (ans[k] !== null) { statAdd(q.id, ans[k] === q.a); S.wrong[q.id] = ans[k] !== q.a; if (ans[k] !== q.a) srsGrade(S.srs, q.id, false); } });
+    S.exams.push({ date: Date.now(), score, total: 33 }); activity(ans.filter(a => a !== null).length);
     const ok = score >= 17;
     render(`
       <div class="card" style="text-align:center"><div class="stat" style="font-size:3em">${score}/33</div>
@@ -383,6 +463,7 @@ function uebungen(l, nxt) {
   }
   function result(ok, solution) {
     if (ok) score++;
+    activity();
     box.querySelectorAll('button.opt, input, [data-ue="order"], [data-ue="reset"], form button').forEach(b => b.disabled = true);
     box.querySelector('#fb').innerHTML = `<div class="feedback ${ok ? 'ok' : 'bad'}">${ok ? 'Richtig!' : 'Richtig wäre: ' + esc(solution)}</div><div class="row end" style="margin-top:12px"><button class="btn primary" data-ue="next">Weiter</button></div>`;
     box.querySelector('[data-ue="next"]').focus();
@@ -441,7 +522,7 @@ function vokabeln(lessonId) {
     if (a === 'flip') { flipped = !flipped; if (flipped && dir === 'ru') speak(pool[i].de); show(); }
     else if (a === 'speak') speak(t.dataset.t);
     else if (a === 'yes' || a === 'no') {
-      srsGrade(S.vok, pool[i].id, a === 'yes');
+      srsGrade(S.vok, pool[i].id, a === 'yes'); activity();
       if (a === 'no') pool.push(pool[i]);
       i++; flipped = false;
       if (i >= pool.length) render(`${back('#kurs', 'Kurs')}<div class="card"><h2>Fertig für jetzt!</h2><p>${learned(S.vok, D.vok.map(v => v.id))} von ${total} Wörtern sicher gelernt.</p><a class="btn primary" href="#kurs">Zum Kurs</a></div>`);
@@ -504,7 +585,7 @@ function dtzAufgabe(part, id) {
     if (t.dataset.act === 'play') { plays++; speak(x.text); draw(); }
     else if (t.dataset.act === 'text') { showText = !showText; draw(); }
     else if (t.dataset.q != null) {
-      ans[+t.dataset.q] = +t.dataset.i;
+      ans[+t.dataset.q] = +t.dataset.i; activity();
       if (ans.every(a => a !== null)) { S.dtzDone = S.dtzDone || {}; S.dtzDone[x.id] = ans.filter((a, k) => a === x.q[k].a).length; save(); }
       const y = window.scrollY; draw(); window.scrollTo(0, y);
     }
@@ -629,32 +710,274 @@ function briefe() {
 }
 
 /* ---------- Einstellungen ---------- */
+
+/* ---------- Startseite (Design „Urkunde“) ---------- */
+function greet() { const h = new Date().getHours(); return h < 11 ? ['Guten Morgen', 'Доброе утро'] : h < 18 ? ['Guten Tag', 'Добрый день'] : ['Guten Abend', 'Добрый вечер']; }
+function stamps() {
+  const lv = l => { const ls = D.kurs.filter(x => x.lv === l), d = ls.filter(x => S.kurs[x.id]?.done).length; return d === ls.length ? 'on' : d ? 'part' : ''; };
+  const qL = learned(S.srs, D.q.map(q => q.id));
+  const passed = S.exams.some(e => e.score >= 17);
+  const docsItems = visibleDocs().flatMap(g => g.items), dD = docsItems.filter(i => S.docs[i.id]).length;
+  const items = [
+    ['A1', 'Deutsch', lv('A1'), '#kurs'], ['A2', 'Deutsch', lv('A2'), '#kurs'], ['B1', 'Deutsch', lv('B1'), '#kurs'],
+    ['LiD', 'Test', passed && qL >= 250 ? 'on g' : qL ? 'part' : '', '#test'],
+    ['✓', 'Behörde', S.amt ? 'on' : '', '#amt'], [String(dD), `/${docsItems.length} Unterl.`, dD >= docsItems.length * 0.8 ? 'on' : dD ? 'part' : '', '#docs'],
+    ['§', 'Antrag', S.milestones.antrag ? 'on g' : '', 'ms:antrag'], ['★', 'Urkunde', S.milestones.urkunde ? 'on g' : '', 'ms:urkunde']];
+  return `<div class="stamps">${items.map(([b, l, c, h]) => h.startsWith('ms:') ? `<button class="st ${c}" data-ms="${h.slice(3)}" aria-pressed="${!!c}" aria-label="${l}: antippen, wenn erledigt"><div><b>${b}</b>${l}</div></button>` : `<a class="st ${c}" href="${h}"><div><b>${esc(b)}</b>${esc(l)}</div></a>`).join('')}</div>`;
+}
+function start() {
+  const qL = learned(S.srs, D.q.map(q => q.id));
+  const best = S.exams.length ? Math.max(...S.exams.map(e => e.score)) : null;
+  const p = planData();
+  const goal = dailyGoal(), doneToday = S.daily[dayKey()] || 0, st = streak();
+  const next = D.kurs.find(l => !S.kurs[l.id]?.done);
+  const [g, gru] = greet(), name = profileName();
+  const tasks = [];
+  if (S.testdate && p.tDays >= 0 && p.tDays <= 7) tasks.push('eine Prüfungssimulation');
+  else tasks.push(`${Math.max(0, goal - doneToday) || goal} Testfragen`);
+  if (next) tasks.push(`Lektion ${next.lv}.${D.kurs.filter(l => l.lv === next.lv).indexOf(next) + 1}`);
+  const soonest = (S.fristen || []).filter(f => f.d).map(f => ({ ...f, n: daysUntil(f.d) })).sort((a, b) => a.n - b.n)[0];
+  let resid = null;
+  if (S.einreise) { const d = new Date(S.einreise); d.setFullYear(d.getFullYear() + (S.ehe ? 3 : 5)); resid = Math.ceil((d - Date.now()) / DAY); }
+  const backupDue = !EMBED && Object.keys(S.daily).length >= 3 && (!S.lastExport || Date.now() - S.lastExport > 30 * DAY);
+  render(`
+    <div class="hero">
+      <div class="row"><span class="eyebrow">Freistaat Sachsen · Ihr Verfahren</span><span class="spacer"></span>${st ? `<span class="streak" title="Lerntage am Stück">🔥 ${st} ${st === 1 ? 'Tag' : 'Tage'}</span>` : ''}</div>
+      <h1>${g}${name ? ', ' + esc(name) : ''}.</h1>${ru(gru + (name ? ', ' + name : '') + '.')}
+      <div style="margin-top:10px"><a class="who" href="#profil">👤 ${P.list.length > 1 ? `${esc(name || 'Profil')} wechseln` : 'Familienmodus'}</a></div>
+    </div>
+    <div class="doc">
+      <div class="field"><span>Einbürgerungstest</span><span>${S.testdate ? 'Termin ' + fmtDate(new Date(S.testdate + 'T00:00')) : '<a href="#plan">Termin eintragen</a>'}</span></div>
+      <div class="count">${qL}<small> / 310 Fragen sicher</small></div>
+      ${stamps()}
+      <p class="small muted" style="margin:10px 0 0">„Antrag“ und „Urkunde“ antippen, wenn erledigt.</p>
+    </div>
+    <div class="today">
+      <div class="ring" style="--p:${Math.min(100, pct(doneToday, goal))}" role="img" aria-label="Tagesziel ${doneToday} von ${goal}"><div><span>${doneToday}/${goal}<small>HEUTE</small></span></div></div>
+      <div class="body"><div class="eyebrow">Heute${S.testdate && p.tDays >= 0 ? ` · noch ${p.tDays} Tage` : ''}</div>
+        <h3>${doneToday >= goal ? 'Tagesziel geschafft! 🎉' : esc(tasks.join(' und '))}</h3>
+        <div class="row"><a class="btn small" href="${S.testdate && p.tDays <= 7 && p.tDays >= 0 ? '#pruefung' : '#lernen'}">${S.testdate && p.tDays <= 7 && p.tDays >= 0 ? 'Simulation' : 'Fragen lernen'}</a>${next ? `<a class="btn small o" href="#lektion--${next.id}">Lektion</a>` : ''}</div></div>
+    </div>
+    <div class="mini">
+      <a href="#test"><div class="n">${best !== null ? best + '/33' : '–'}</div><div class="l">Beste Simulation</div></a>
+      ${soonest ? `<a href="#fristen"><div class="n" style="color:${soonest.n < 0 ? 'var(--bad)' : soonest.n < 180 ? 'var(--warn)' : 'inherit'}">${soonest.n < 0 ? 'abgelaufen' : soonest.n + ' T.'}</div><div class="l">${esc(soonest.t)} gültig</div></a>`
+        : resid !== null ? `<a href="#check"><div class="n">${resid <= 0 ? '✓' : resid + ' T.'}</div><div class="l">${resid <= 0 ? 'Aufenthaltsdauer erfüllt' : 'bis Antrag möglich'}</div></a>`
+        : `<a href="#check"><div class="n">?</div><div class="l">Ab wann darfst du? Prüfen</div></a>`}
+    </div>
+    ${fristWarnings()}
+    ${backupDue ? `<div class="notice">Sichere deinen Fortschritt ab und zu als Datei – z. B. für einen Handywechsel.<div class="row" style="margin-top:8px"><button class="btn small" data-act="backup">Sicherung herunterladen</button></div></div>` : ''}
+    <details class="level"><summary><span class="lv">Schritt für Schritt</span><span class="badge">${D.info.steps.filter(s => stepDone(s.id)).length}/${D.info.steps.length}</span><span class="spacer"></span><span class="chev">›</span></summary>
+      <ol class="steps" style="margin-top:14px">${D.info.steps.map(s => `<li class="${stepDone(s.id) ? 'done' : ''}"><b>${esc(s.t)}</b>${ru(s.ru)}<div class="small" style="margin-top:4px">${esc(s.d)}</div>${ru(s.dru)}${s.go ? `<a class="btn small" style="margin-top:8px" href="#${s.go}">Öffnen</a>` : ''}</li>`).join('')}</ol></details>
+    <p class="small muted">Stand ${esc(D.info.stand)}. Keine Rechtsberatung – verbindlich ist die Auskunft deiner Einbürgerungsbehörde.</p>`);
+  $app.onclick = e => {
+    const m = e.target.closest('[data-ms]');
+    if (m) { const k = m.dataset.ms; S.milestones[k] = !S.milestones[k]; save(); if (S.milestones[k]) toast(k === 'urkunde' ? 'Herzlichen Glückwunsch! 🎉' : 'Antrag gestellt – viel Erfolg!'); start(); return; }
+    if (e.target.closest('[data-act="backup"]')) exportBackup();
+  };
+  cleanup = () => { $app.onclick = null; };
+}
+function exportBackup() {
+  download(`einbuergerung-sicherung-${dayKey()}.json`, JSON.stringify(fullBackup()), 'application/json');
+  S.lastExport = Date.now(); save(); toast('Sicherungsdatei erstellt');
+}
+
+/* ---------- Statistik nach Themen ---------- */
+function topicStats() {
+  return D.topics.map((t, k) => {
+    const qs = D.q.filter(q => q.t === t); let r = 0, w = 0;
+    qs.forEach(q => { const s = S.stat[q.id]; if (s) { r += s.r; w += s.w; } });
+    return { t, k, n: qs.length, r, w, rate: r + w ? w / (r + w) : 0 };
+  });
+}
+function topicWeak(q) { const s = S.stat[q.id]; return s ? (s.w + 1) / (s.r + s.w + 2) : 0.5; }
+function statsCard() {
+  const ts = topicStats().filter(x => x.r + x.w >= 5);
+  if (!ts.length) return `<div class="card flat"><h3 style="margin:0 0 4px">Deine Themen-Statistik</h3><p class="small muted" style="margin:0">Erscheint, sobald du ein paar Fragen beantwortet hast.</p></div>`;
+  const worst = ts.sort((a, b) => b.rate - a.rate).slice(0, 4);
+  return `<div class="card"><h3>Hier passieren die meisten Fehler</h3>${ru('Здесь больше всего ошибок')}
+    <div style="margin-top:12px">${worst.map(x => `<div class="barrow"><span>${esc(x.t)} <span class="small muted">· ${x.w} von ${x.r + x.w} falsch</span></span><a class="btn small" href="#lernen--thema--${x.k}">Üben</a>${bar(Math.round(x.rate * 100))}</div>`).join('')}</div></div>`;
+}
+
+/* ---------- Audio-Modus ---------- */
+function audio() {
+  const modes = [['due', 'Fällige & neue'], ['fehler', 'Meine Fehler'], ['alle', 'Alle (zufällig)']];
+  let mode = 'due', pool = [], i = 0, playing = false, token = 0, ruEx = false, wake = null;
+  const build = () => {
+    const now = Date.now();
+    if (mode === 'fehler') pool = shuffle(D.q.filter(q => S.wrong[q.id]));
+    else if (mode === 'alle') pool = shuffle(D.q);
+    else pool = [...D.q.filter(q => S.srs[q.id] && S.srs[q.id].due <= now), ...D.q.filter(q => !S.srs[q.id])].slice(0, 30);
+    if (!pool.length) pool = shuffle(D.q).slice(0, 30);
+    i = 0;
+  };
+  const voice = lang => speechSynthesis.getVoices().find(v => v.lang && v.lang.startsWith(lang));
+  const say = (text, lang = 'de-DE') => new Promise(res => {
+    const u = new SpeechSynthesisUtterance(text); u.lang = lang; u.rate = 0.92; const v = voice(lang.slice(0, 2)); if (v) u.voice = v;
+    u.onend = res; u.onerror = res; speechSynthesis.speak(u);
+  });
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  async function playFrom() {
+    const my = ++token; playing = true; draw();
+    try { wake = await navigator.wakeLock?.request('screen'); } catch {}
+    while (playing && my === token && i < pool.length) {
+      const q = pool[i]; draw();
+      const clean = s => s.replace(/…/g, ' ').replace(/\//g, ' oder ');
+      await say(clean(q.q)); if (my !== token) return;
+      await wait(500);
+      for (let k = 0; k < 4; k++) { await say(`${ABC[k]}: ${clean(q.o[k])}`); if (my !== token) return; await wait(250); }
+      await wait(3500); if (my !== token) return;
+      await say(`Richtig ist ${ABC[q.a]}: ${clean(q.o[q.a])}.`); if (my !== token) return;
+      if (q.e) { await wait(300); await say(q.e[0]); if (my !== token) return; }
+      if (ruEx && q.e) { await wait(300); await say(q.e[1], 'ru-RU'); if (my !== token) return; }
+      await wait(1200);
+      i++;
+    }
+    if (my === token) { playing = false; wake?.release?.().catch(() => {}); draw(); }
+  }
+  function stop() { token++; playing = false; speechSynthesis.cancel(); wake?.release?.().catch(() => {}); }
+  function draw() {
+    const q = pool[i];
+    render(`${back('#test', 'Test')}<h1>Audio-Modus</h1><p class="muted">Fragen, Antworten und Erklärungen werden nacheinander vorgelesen – zum Lernen unterwegs. Nach den Antworten bleiben 3 Sekunden zum Nachdenken.${ru('Вопросы, ответы и объяснения зачитываются по очереди — для учёбы в дороге.')}</p>
+      <div class="chips">${modes.map(([k, n]) => `<button class="chip ${mode === k ? 'on' : ''}" data-mode="${k}">${n}</button>`).join('')}</div>
+      <label class="check" style="margin-bottom:14px"><input type="checkbox" id="ruex" ${ruEx ? 'checked' : ''}><div>Erklärung zusätzlich auf Russisch vorlesen${ru('Дополнительно зачитывать объяснение на русском')}</div></label>
+      ${q ? `<div class="card"><div class="q-head"><span>Frage ${q.n} · ${esc(q.t)}</span><span>${i + 1} / ${pool.length}</span></div><div class="q-text">${esc(q.q)}</div>
+        <ol class="small" style="margin:0;padding-left:1.2em">${q.o.map((o, k) => `<li style="${playing ? '' : ''}">${esc(o)}</li>`).join('')}</ol></div>` : ''}
+      <div class="player"><button class="btn round" data-act="prev" aria-label="Vorherige Frage">‹</button><button class="btn primary round" data-act="toggle" aria-label="${playing ? 'Pause' : 'Abspielen'}">${playing ? '❚❚' : '▶'}</button><button class="btn round" data-act="next" aria-label="Nächste Frage">›</button></div>
+      <p class="small muted" style="margin-top:16px;text-align:center">Tipp: Bildschirm anlassen – bei gesperrtem Handy stoppen viele Browser das Vorlesen.</p>`);
+  }
+  if (!('speechSynthesis' in window)) { render(`${back('#test', 'Test')}<h1>Audio-Modus</h1><div class="notice">Dein Browser unterstützt keine Sprachausgabe.</div>`); return; }
+  build();
+  $app.onclick = e => {
+    const t = e.target.closest('[data-act],[data-mode]'); if (!t) return;
+    if (t.dataset.mode) { stop(); mode = t.dataset.mode; build(); draw(); return; }
+    const a = t.dataset.act;
+    if (a === 'toggle') { if (playing) { stop(); draw(); } else playFrom(); }
+    else if (a === 'next' || a === 'prev') { const was = playing; stop(); i = Math.max(0, Math.min(pool.length - 1, i + (a === 'next' ? 1 : -1))); was ? playFrom() : draw(); }
+  };
+  $app.onchange = e => { if (e.target.id === 'ruex') ruEx = e.target.checked; };
+  cleanup = () => { stop(); $app.onclick = null; $app.onchange = null; };
+  draw();
+}
+
+/* ---------- Termin-Checklisten ---------- */
+function termine() {
+  render(`<h1>Was muss ich mitbringen?</h1><p class="muted">Abhakbare Listen für deine Termine. Verbindlich ist immer, was in deiner Einladung steht.${ru('Списки для ваших встреч. Обязательно то, что указано в приглашении.')}</p>
+    ${D.info.termine.map(T => { const done = T.items.filter((_, k) => S.term[`${T.id}:${k}`]).length;
+      return `<details class="level" ${done && done < T.items.length ? 'open' : ''}><summary><span class="lv">${esc(T.t)}</span><span class="badge ${done === T.items.length ? 'ok' : ''}">${done}/${T.items.length}</span><span class="spacer"></span><span class="chev">›</span></summary>${ru(T.ru)}
+      <ul class="list" style="margin-top:8px">${T.items.map(([t, r], k) => { const id = `${T.id}:${k}`; return `<li><label class="check ${S.term[id] ? 'done' : ''}"><input type="checkbox" data-term="${id}" ${S.term[id] ? 'checked' : ''}><div><span class="t">${esc(t)}</span>${ru(r)}</div></label></li>`; }).join('')}</ul>
+      <button class="btn small ghost" data-reset="${T.id}">Liste zurücksetzen</button></details>`; }).join('')}`);
+  $app.onchange = e => { const c = e.target.closest('[data-term]'); if (c) { S.term[c.dataset.term] = c.checked; save(); c.closest('.check').classList.toggle('done', c.checked); } };
+  $app.onclick = e => { const r = e.target.closest('[data-reset]'); if (r) { Object.keys(S.term).filter(k => k.startsWith(r.dataset.reset + ':')).forEach(k => delete S.term[k]); save(); termine(); } };
+  cleanup = () => { $app.onclick = null; $app.onchange = null; };
+}
+
+/* ---------- Wörterbuch zum Antippen ---------- */
+function gloss(html) {
+  if (!D.gRe) return html;
+  return html.replace(D.gRe, m => { const k = D.gIndex[m.toLowerCase()]; return k == null ? m : `<span class="term" role="button" tabindex="0" data-g="${k}">${m}</span>`; });
+}
+function closePop() { document.getElementById('pop')?.remove(); }
+function showPop(k) {
+  closePop(); const g = D.glossar[k]; if (!g) return;
+  const el = document.createElement('div'); el.id = 'pop'; el.className = 'pop'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', g.w);
+  el.innerHTML = `<div class="row"><h3>${esc(g.w)}</h3><span class="spacer"></span>${speakBtn(g.w)}<button class="btn small ghost" data-close aria-label="Schließen">✕</button></div><p style="margin:0">${esc(g.de)}</p><span class="ru" lang="ru" style="display:block">${esc(g.ru)}</span>`;
+  el.onclick = e => { if (e.target.closest('[data-close]')) closePop(); const s = e.target.closest('[data-act="speak"]'); if (s) speak(s.dataset.t); };
+  document.body.appendChild(el);
+}
+// Begriffe abfangen, bevor die Antwort ausgewählt wird
+document.addEventListener('click', e => {
+  const t = e.target.closest('.term');
+  if (t) { e.preventDefault(); e.stopPropagation(); showPop(+t.dataset.g); return; }
+  if (!e.target.closest('#pop')) closePop();
+}, true);
+document.addEventListener('keydown', e => { const t = e.target.closest?.('.term'); if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.stopPropagation(); showPop(+t.dataset.g); } if (e.key === 'Escape') closePop(); }, true);
+function glossar() {
+  let term = '';
+  render(`${back('#test', 'Test')}<h1>Wörterbuch</h1><p class="muted">Schwierige Begriffe aus dem Einbürgerungstest. In den Testfragen sind sie gepunktet unterstrichen – einfach antippen.${ru('Сложные термины из теста. В вопросах они подчёркнуты пунктиром — просто нажмите.')}</p>
+    <input class="text" type="search" id="gs" placeholder="Begriff suchen …" aria-label="Begriff suchen" style="margin-bottom:12px"><div id="gl"></div>`);
+  const draw = () => {
+    const t = term.toLowerCase();
+    document.getElementById('gl').innerHTML = `<div class="card"><ul class="list">${D.glossar.filter(g => !t || (g.w + g.de + g.ru).toLowerCase().includes(t)).sort((a, b) => a.w.localeCompare(b.w, 'de')).map(g => `<li class="vok"><div><b>${esc(g.w)}</b><div class="small">${esc(g.de)}</div><span class="ru" lang="ru">${esc(g.ru)}</span></div>${speakBtn(g.w)}</li>`).join('')}</ul></div>`;
+  };
+  document.getElementById('gs').oninput = e => { term = e.target.value.trim(); draw(); };
+  $app.onclick = e => { const s = e.target.closest('[data-act="speak"]'); if (s) speak(s.dataset.t); };
+  cleanup = () => { $app.onclick = null; };
+  draw();
+}
+
+/* ---------- Familienmodus ---------- */
+function profil() {
+  render(`<h1>Familienmodus</h1><p class="muted">Mehrere Personen können auf einem Gerät lernen – jede mit eigenem Lernstand. Unterlagen-Checkliste, Behörde, Kosten und Mitbring-Listen sind gemeinsam.${ru('Несколько человек могут учиться на одном устройстве — у каждого свой прогресс. Документы, ведомство, расходы и списки общие.')}</p>
+    <div class="card"><ul class="list">${P.list.map(p => `<li><div class="row"><input class="text" data-pname="${p.id}" value="${esc(p.name)}" placeholder="Name (z. B. Olga)" aria-label="Name" style="flex:1;min-width:0">
+      ${p.id === P.active ? '<span class="badge ok">aktiv</span>' : `<button class="btn small primary" data-use="${p.id}">Wechseln</button>`}
+      ${P.list.length > 1 && p.id !== 'p1' ? `<button class="btn small ghost" data-del="${p.id}">Löschen</button>` : ''}</div></li>`).join('')}</ul>
+      <button class="btn small" data-act="add" style="margin-top:8px">+ Person hinzufügen</button></div>
+    <p class="small muted">Tipp: Jede Person kann eigene Prüfungstermine, Fristen und einen eigenen Lebenslauf haben.</p>`);
+  $app.onchange = e => { const n = e.target.dataset.pname; if (n) { P.list.find(p => p.id === n).name = e.target.value.trim(); writeJSON('eb.profiles', P); toast('Gespeichert'); } };
+  $app.onclick = e => {
+    const t = e.target.closest('[data-use],[data-del],[data-act="add"]'); if (!t) return;
+    if (t.dataset.use) { switchProfile(t.dataset.use); toast(`Profil: ${profileName() || 'ohne Namen'}`); location.hash = '#start'; }
+    else if (t.dataset.del) {
+      if (!t.dataset.sure) { t.dataset.sure = '1'; t.textContent = 'Wirklich löschen?'; return; }
+      const id = t.dataset.del; if (P.active === id) switchProfile('p1');
+      P.list = P.list.filter(p => p.id !== id); writeJSON('eb.profiles', P);
+      try { localStorage.removeItem(pKey(id)); } catch {} idbDel(pKey(id)); profil();
+    } else { const id = 'p' + Date.now().toString(36); P.list.push({ id, name: '' }); writeJSON('eb.profiles', P); profil(); setTimeout(() => document.querySelector(`[data-pname="${id}"]`)?.focus(), 50); }
+  };
+  cleanup = () => { $app.onclick = null; $app.onchange = null; };
+}
+
+/* ---------- Einstellungen ---------- */
+async function snapshotList() {
+  const ks = (await idbKeys() || []).filter(k => String(k).startsWith('snap:')).sort().reverse();
+  const box = document.getElementById('snaps'); if (!box) return;
+  const label = k => /^snap:\d{4}-/.test(k) ? fmtDate(new Date(k.slice(5) + 'T12:00')) : k.includes('zuruecksetzen') ? 'Vor dem Zurücksetzen' : 'Vor der letzten Wiederherstellung';
+  box.innerHTML = ks.length ? `<ul class="list">${ks.map(k => `<li class="row"><span>${label(k)}</span><span class="spacer"></span><button class="btn small" data-snap="${k}">Wiederherstellen</button></li>`).join('')}</ul>` : '<p class="small muted">Noch keine Sicherungspunkte – der erste entsteht morgen beim Öffnen.</p>';
+}
+async function storageStatus() {
+  const el = document.getElementById('persist'); if (!el) return;
+  let pers = null; try { pers = await navigator.storage?.persisted?.(); } catch {}
+  el.innerHTML = `${IDB.db ? '✓ Doppelte Speicherung aktiv' : '⚠ Nur einfache Speicherung (zweite Ablage nicht verfügbar)'}<br>${pers ? '✓ Dauerhafter Speicher vom Browser bestätigt' : 'Dauerhafter Speicher nicht bestätigt – am sichersten: App installieren und regelmäßig eine Sicherungsdatei herunterladen.'}`;
+}
 function einstellungen() {
   render(`<h1>Einstellungen</h1>
     <div class="card"><label class="check"><input type="checkbox" id="ru" ${S.ru ? 'checked' : ''}><div><b>Russische Erklärungen anzeigen</b><span class="ru" lang="ru" style="display:block">Показывать пояснения на русском</span></div></label></div>
-    <div class="card"><b>Schriftgröße</b><div class="chips" style="margin-top:10px">${[['m', 'Normal'], ['l', 'Groß'], ['xl', 'Sehr groß']].map(([k, n]) => `<button class="chip ${S.size === k ? 'on' : ''}" data-size="${k}">${n}</button>`).join('')}</div>
-      <b>Darstellung</b><div class="chips" style="margin-top:10px">${[['auto', 'Automatisch'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([k, n]) => `<button class="chip ${S.theme === k ? 'on' : ''}" data-theme="${k}">${n}</button>`).join('')}</div></div>
-    <div class="card"><h2>Fortschritt sichern</h2><p class="small">Dein Fortschritt wird nur auf diesem Gerät gespeichert. Mit einer Sicherungsdatei kannst du ihn auf ein anderes Gerät übertragen.</p>
-      <div class="row">${EMBED ? '' : '<button class="btn small" data-act="export">Sicherung herunterladen</button>'}<label class="btn small">Sicherung laden<input type="file" accept="application/json" id="imp" hidden></label><button class="btn small ghost" data-act="reset">Alles zurücksetzen</button></div></div>
-    <div class="card"><h2>App installieren</h2><p class="small">Installiert funktioniert alles auch ohne Internet.</p><a class="btn small" href="#installieren">Anleitung für dein Gerät</a></div>
+    <div class="card"><label class="lbl">Schriftgröße</label><div class="chips">${[['m', 'Normal'], ['l', 'Groß'], ['xl', 'Sehr groß']].map(([k, n]) => `<button class="chip ${S.size === k ? 'on' : ''}" data-size="${k}">${n}</button>`).join('')}</div>
+      <label class="lbl">Darstellung</label><div class="chips" style="margin:0">${[['auto', 'Automatisch'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([k, n]) => `<button class="chip ${S.theme === k ? 'on' : ''}" data-theme="${k}">${n}</button>`).join('')}</div></div>
+    <div class="card"><h2>Speichern & Sichern</h2>
+      <p class="small">Alles wird automatisch gespeichert – sofort nach jeder Eingabe, doppelt auf diesem Gerät.${ru('Всё сохраняется автоматически сразу после каждого действия, дважды на этом устройстве.')}</p>
+      <p class="small" id="persist">…</p>
+      <p class="small">${S.lastExport ? `Letzte Sicherungsdatei: ${fmtDate(S.lastExport)}` : 'Noch keine Sicherungsdatei heruntergeladen.'}</p>
+      <div class="row">${EMBED ? '' : '<button class="btn small primary" data-act="export">Sicherungsdatei herunterladen</button>'}<label class="btn small">Sicherungsdatei laden<input type="file" accept="application/json,.json" id="imp" hidden></label></div>
+      <h3 style="margin-top:18px">Automatische Sicherungspunkte</h3><p class="small muted">Einmal täglich, die letzten 7 Tage.</p><div id="snaps"></div>
+      <div class="row" style="margin-top:12px"><button class="btn small ghost" data-act="reset">Lernstand dieses Profils zurücksetzen</button></div></div>
+    <div class="card"><h2>Familienmodus</h2><p class="small">${P.list.length} Profil${P.list.length > 1 ? 'e' : ''} auf diesem Gerät.</p><a class="btn small" href="#profil">Profile verwalten</a></div>
+    <div class="card"><h2>App installieren</h2><p class="small">Installiert funktioniert alles auch ohne Internet, und der Browser hält deine Daten zuverlässiger.</p><a class="btn small" href="#installieren">Anleitung für dein Gerät</a></div>
     <div class="card"><h2>Quellen & Hinweise</h2>
       <p class="small"><b>Fragenkatalog:</b> ${esc(D.qmeta.source)}. Amtliches Werk nach § 5 UrhG, unverändert wiedergegeben. Lösungen: ${esc(D.qmeta.answers)}.</p>
-      <p class="small">${esc(D.qmeta.translation_ru)}. ${esc(D.qmeta.images)}.</p>
+      <p class="small">${esc(D.qmeta.translation_ru)}. ${esc(D.qmeta.images)}. Schrift „Lora“ unter SIL Open Font License.</p>
       <p class="small"><b>Rechtsstand:</b> Staatsangehörigkeitsgesetz in der Fassung nach Abschaffung der 3-Jahres-Einbürgerung (in Kraft seit 30.10.2025). Gebühr 255 € (§ 38 StAG). Behördenangaben: Websites der Landkreise und des Freistaates Sachsen, Stand ${esc(D.info.stand)}.</p>
       <p class="small"><b>Keine Rechtsberatung.</b> Diese App ist ein privates, kostenloses Lernangebot und steht in keiner Verbindung zum BAMF oder zu Behörden. Verbindlich ist allein die Auskunft deiner Einbürgerungsbehörde.</p>
-      <p class="small"><b>Datenschutz:</b> keine Anmeldung, keine Cookies, kein Tracking. Alle Eingaben bleiben im Speicher deines Browsers.</p>
+      <p class="small"><b>Datenschutz:</b> keine Anmeldung, keine Cookies, kein Tracking. Alle Eingaben bleiben auf deinem Gerät.</p>
       <p class="small muted">Version ${VERSION}</p></div>`);
+  storageStatus(); snapshotList();
   $app.onchange = e => {
     if (e.target.id === 'ru') { S.ru = e.target.checked; save(); applyPrefs(); }
-    if (e.target.id === 'imp') { const f = e.target.files[0]; if (!f) return; f.text().then(t => { S = Object.assign({}, defaults, JSON.parse(t)); save(); applyPrefs(); toast('Sicherung geladen'); einstellungen(); }).catch(() => toast('Datei ungültig')); }
+    if (e.target.id === 'imp') { const f = e.target.files[0]; if (!f) return; f.text().then(t => { restoreBackup(JSON.parse(t)); applyPrefs(); toast('Sicherung geladen'); einstellungen(); }).catch(() => toast('Datei ungültig – bitte eine Sicherungsdatei dieser App wählen.')); }
   };
-  $app.onclick = e => {
-    const t = e.target.closest('[data-size],[data-theme],[data-act]'); if (!t) return;
+  $app.onclick = async e => {
+    const t = e.target.closest('[data-size],[data-theme],[data-act],[data-snap]'); if (!t) return;
     if (t.dataset.size) { S.size = t.dataset.size; save(); applyPrefs(); einstellungen(); }
     else if (t.dataset.theme) { S.theme = t.dataset.theme; save(); applyPrefs(); einstellungen(); }
-    else if (t.dataset.act === 'export') { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = `einbuergerung-sicherung-${new Date().toISOString().slice(0, 10)}.json`; a.click(); }
-    else if (t.dataset.act === 'reset' && !t.dataset.sure) { t.dataset.sure = '1'; t.textContent = 'Wirklich alles löschen? Nochmal tippen'; }
-    else if (t.dataset.act === 'reset') { S = Object.assign({}, defaults); save(); applyPrefs(); toast('Zurückgesetzt'); einstellungen(); }
+    else if (t.dataset.act === 'export') { exportBackup(); einstellungen(); }
+    else if (t.dataset.snap) {
+      if (!t.dataset.sure) { t.dataset.sure = '1'; t.textContent = 'Sicher? Nochmal tippen'; return; }
+      await idbPut('snap:vor-wiederherstellung', fullBackup());
+      const b = await idbGet(t.dataset.snap); if (!b) return toast('Sicherungspunkt nicht lesbar');
+      restoreBackup(b); applyPrefs(); toast('Wiederhergestellt'); einstellungen();
+    }
+    else if (t.dataset.act === 'reset' && !t.dataset.sure) { t.dataset.sure = '1'; t.textContent = 'Wirklich zurücksetzen? Nochmal tippen'; }
+    else if (t.dataset.act === 'reset') { await idbPut('snap:vor-zuruecksetzen', fullBackup()); const keep = {}; SHARED.forEach(k => keep[k] = S[k]); S = Object.assign({}, defaults, keep); save(); applyPrefs(); toast('Zurückgesetzt'); einstellungen(); }
   };
   cleanup = () => { $app.onclick = null; $app.onchange = null; };
 }

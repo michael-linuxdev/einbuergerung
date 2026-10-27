@@ -599,5 +599,159 @@
    "ru": "Перенести встречу",
    "text": "Sehr geehrte Damen und Herren,\n\nleider kann ich den Termin am [Datum] um [Uhrzeit] nicht wahrnehmen, weil [Grund]. Könnten Sie mir bitte einen neuen Termin vorschlagen? Ich kann [Tage/Zeiten].\n\nVielen Dank für Ihr Verständnis.\n\nMit freundlichen Grüßen\n[Vorname Nachname]"
   }
+ ],
+ "termine": [
+  {
+   "id": "t_lid",
+   "t": "Einbürgerungstest",
+   "ru": "Тест на натурализацию",
+   "items": [
+    [
+     "Gültiger Pass oder Personaldokument mit Foto",
+     "Действующий паспорт или документ с фото"
+    ],
+    [
+     "Anmeldebestätigung der Volkshochschule",
+     "Подтверждение записи из народного университета"
+    ],
+    [
+     "Gebühr 25 €, falls noch nicht bezahlt (Zahlungsart vorher erfragen)",
+     "Сбор 25 €, если ещё не оплачен (способ оплаты уточнить заранее)"
+    ],
+    [
+     "Kugelschreiber",
+     "Шариковая ручка"
+    ],
+    [
+     "Lesebrille, falls nötig",
+     "Очки для чтения, если нужны"
+    ],
+    [
+     "15–30 Minuten früher da sein",
+     "Прийти на 15–30 минут раньше"
+    ],
+    [
+     "Handy aus und weggepackt – Hilfsmittel sind nicht erlaubt",
+     "Телефон выключить и убрать — вспомогательные средства запрещены"
+    ],
+    [
+     "Am Vortag eine Prüfungssimulation machen",
+     "Накануне пройти пробный экзамен"
+    ]
+   ]
+  },
+  {
+   "id": "t_b1",
+   "t": "B1-Sprachprüfung (z. B. DTZ)",
+   "ru": "Языковой экзамен B1 (например, DTZ)",
+   "items": [
+    [
+     "Gültiger Pass oder Personaldokument mit Foto",
+     "Действующий паспорт или документ с фото"
+    ],
+    [
+     "Einladung bzw. Anmeldebestätigung (Uhrzeiten für schriftlich und mündlich prüfen!)",
+     "Приглашение / подтверждение (проверить время письменной и устной части!)"
+    ],
+    [
+     "Schreibzeug laut Einladung",
+     "Письменные принадлежности согласно приглашению"
+    ],
+    [
+     "Getränk und kleiner Snack für die Pausen",
+     "Напиток и небольшой перекус на перерывы"
+    ],
+    [
+     "Uhr ohne Internet (Smartwatch und Handy sind verboten)",
+     "Часы без интернета (смарт-часы и телефон запрещены)"
+    ],
+    [
+     "Redemittel für „gemeinsam planen“ am Vortag wiederholen",
+     "Накануне повторить фразы для «совместного планирования»"
+    ],
+    [
+     "Rechtzeitig da sein – zu spät heißt oft: nicht zugelassen",
+     "Прийти вовремя — опоздавших часто не допускают"
+    ]
+   ]
+  },
+  {
+   "id": "t_amt",
+   "t": "Termin bei der Einbürgerungsbehörde",
+   "ru": "Приём в ведомстве по натурализации",
+   "items": [
+    [
+     "Einladung mit Aktenzeichen",
+     "Приглашение с номером дела"
+    ],
+    [
+     "Pass und Aufenthaltstitel im Original",
+     "Паспорт и вид на жительство в оригинале"
+    ],
+    [
+     "Alle Urkunden im Original plus Kopien (Geburt, Heirat, Kinder)",
+     "Все свидетельства в оригинале плюс копии (рождение, брак, дети)"
+    ],
+    [
+     "Beglaubigte Übersetzungen und ggf. Apostillen",
+     "Заверенные переводы и при необходимости апостили"
+    ],
+    [
+     "B1-Zertifikat und Zertifikat Einbürgerungstest",
+     "Сертификат B1 и сертификат теста на натурализацию"
+    ],
+    [
+     "Lebenslauf (beim LRA Pirna: ausführlich, nicht tabellarisch)",
+     "Автобиография (в Ландратсамте Пирны — подробная, не таблицей)"
+    ],
+    [
+     "Aktuelle Gehaltsabrechnungen, Arbeitsvertrag, Rentenversicherungsverlauf",
+     "Актуальные расчётные листки, трудовой договор, выписка о пенсионном стаже"
+    ],
+    [
+     "Mietvertrag / Meldebescheinigung",
+     "Договор аренды / справка о регистрации"
+    ],
+    [
+     "Ehepartner und Kinder ab 16 mitbringen, wenn sie miteingebürgert werden",
+     "Взять супруга и детей от 16 лет, если они натурализуются вместе"
+    ],
+    [
+     "Antrag erst vor Ort unterschreiben (wenn die Behörde das verlangt)",
+     "Подписывать заявление только на месте (если этого требует ведомство)"
+    ],
+    [
+     "Ordner mit Inhaltsverzeichnis – das spart Zeit",
+     "Папка с оглавлением — это экономит время"
+    ]
+   ]
+  },
+  {
+   "id": "t_urk",
+   "t": "Übergabe der Einbürgerungsurkunde",
+   "ru": "Вручение свидетельства о натурализации",
+   "items": [
+    [
+     "Einladung",
+     "Приглашение"
+    ],
+    [
+     "Pass und Aufenthaltstitel (der Titel wird oft abgegeben)",
+     "Паспорт и вид на жительство (вид на жительство часто сдают)"
+    ],
+    [
+     "Bekenntnis zur freiheitlichen demokratischen Grundordnung vorher einmal durchlesen",
+     "Заранее прочитать текст обязательства о свободном демократическом строе"
+    ],
+    [
+     "Fragen, ob Familie oder Freunde mitkommen dürfen",
+     "Уточнить, могут ли прийти родные или друзья"
+    ],
+    [
+     "Direkt danach: Termin im Bürgerbüro für Personalausweis und Reisepass",
+     "Сразу после: запись в бюро граждан на удостоверение личности и паспорт"
+    ]
+   ]
+  }
  ]
 }
