@@ -1,13 +1,13 @@
 {
  "info": {
   "de": "Der Deutsch-Test für Zuwanderer (DTZ) prüft A2 und B1. Für die Einbürgerung brauchst du B1 in allen Teilen. Teile: Hören (ca. 25 Min.), Lesen (45 Min.), Schreiben (30 Min.), Sprechen (ca. 16 Min., mit Partner). Auch andere B1-Zertifikate werden anerkannt (z. B. Goethe, telc, ÖSD) – frag deine Behörde.",
-  "ru": "Тест для иммигрантов (DTZ) проверяет уровни A2 и B1. Для натурализации нужен B1 во всех частях. Части: аудирование (ок. 25 мин), чтение (45 мин), письмо (30 мин), говорение (ок. 16 мин, с партнёром). Признаются и другие сертификаты B1 (например, Goethe, telc, ÖSD) — уточните в своём ведомстве."
+  "ru": "dtz.info"
  },
  "schreiben": [
   {
    "id": "w1",
    "t": "Kurs absagen",
-   "ru": "Отменить курс",
+   "ru": "dtz.schreiben.w1",
    "sit": "Sie haben sich für einen Computerkurs an der Volkshochschule angemeldet. Sie können aber nicht teilnehmen. Schreiben Sie an die VHS.",
    "p": [
     "Grund für die Absage",
@@ -20,7 +20,7 @@
   {
    "id": "w2",
    "t": "Beschwerde beim Vermieter",
-   "ru": "Жалоба арендодателю",
+   "ru": "dtz.schreiben.w2",
    "sit": "In Ihrer Wohnung funktioniert seit einer Woche das warme Wasser nicht. Sie haben schon angerufen, aber niemand ist gekommen. Schreiben Sie an Ihre Vermieterin.",
    "p": [
     "Problem beschreiben",
@@ -33,7 +33,7 @@
   {
    "id": "w3",
    "t": "Einladung an eine Freundin",
-   "ru": "Приглашение подруги",
+   "ru": "dtz.schreiben.w3",
    "sit": "Sie feiern Ihren Geburtstag. Schreiben Sie eine E-Mail an Ihre Freundin Anna.",
    "p": [
     "Wann und wo",
@@ -46,7 +46,7 @@
   {
    "id": "w4",
    "t": "Termin bei der Behörde verschieben",
-   "ru": "Перенести приём в ведомстве",
+   "ru": "dtz.schreiben.w4",
    "sit": "Sie haben eine Einladung zum Termin bei der Einbürgerungsbehörde bekommen. An dem Tag haben Sie Ihre B1-Prüfung. Schreiben Sie an die Behörde.",
    "p": [
     "Dank für die Einladung",
@@ -60,7 +60,7 @@
  "sprechen": [
   {
    "t": "Teil 1 – Über sich sprechen",
-   "ru": "Часть 1 — Рассказ о себе",
+   "ru": "dtz.sprechen.0",
    "fragen": [
     "Wie heißen Sie und woher kommen Sie?",
     "Seit wann leben Sie in Deutschland und wo wohnen Sie?",
@@ -72,7 +72,7 @@
   },
   {
    "t": "Teil 2 – Bild beschreiben und erzählen",
-   "ru": "Часть 2 — Описание картинки и рассказ",
+   "ru": "dtz.sprechen.1",
    "fragen": [
     "Thema „Einkaufen“: Beschreiben Sie eine Situation im Supermarkt. Wo kaufen Sie ein? Was ist in Ihrem Heimatland anders?",
     "Thema „Arbeit“: Beschreiben Sie einen Arbeitsplatz im Büro. Wie sieht Ihr Arbeitstag aus?",
@@ -82,7 +82,7 @@
   },
   {
    "t": "Teil 3 – Gemeinsam planen",
-   "ru": "Часть 3 — Совместное планирование",
+   "ru": "dtz.sprechen.2",
    "fragen": [
     "Ihr Nachbar zieht um. Planen Sie zusammen, wie Sie helfen: Wann? Wer hilft noch? Auto? Essen und Getränke?",
     "Ihre Kursleiterin hat Geburtstag. Planen Sie eine Überraschung: Geschenk? Wer kauft was? Wann? Kuchen?",
@@ -94,7 +94,7 @@
   {
    "id": "h1",
    "t": "Durchsage am Bahnhof",
-   "ru": "Объявление на вокзале",
+   "ru": "dtz.hoeren.h1",
    "text": "Achtung an Gleis 2. Die S-Bahn S1 nach Bad Schandau, planmäßige Abfahrt 8 Uhr 14, fährt heute von Gleis 4. Grund ist eine Weichenstörung. Wir bitten um Entschuldigung.",
    "q": [
     {
@@ -122,7 +122,7 @@
   {
    "id": "h2",
    "t": "Anrufbeantworter: Arztpraxis",
-   "ru": "Автоответчик: врачебный кабинет",
+   "ru": "dtz.hoeren.h2",
    "text": "Guten Tag, Sie sind verbunden mit der Praxis Dr. Lehmann. Unsere Praxis ist vom 23. bis 27. Dezember geschlossen. In dringenden Fällen wenden Sie sich bitte an den ärztlichen Bereitschaftsdienst unter der Nummer 116 117. Ab dem 30. Dezember sind wir wieder für Sie da.",
    "q": [
     {
@@ -150,7 +150,7 @@
   {
    "id": "h3",
    "t": "Nachricht von der Kita",
-   "ru": "Сообщение из детского сада",
+   "ru": "dtz.hoeren.h3",
    "text": "Hallo Frau Popova, hier ist Frau Weber von der Kita Sonnenschein. Morgen machen wir einen Ausflug in den Zoo. Bitte geben Sie Ihrer Tochter Regenkleidung und etwas zu trinken mit. Das Mittagessen bekommen die Kinder dort. Wir sind um 15 Uhr zurück. Danke und bis morgen!",
    "q": [
     {
@@ -178,7 +178,7 @@
   {
    "id": "h4",
    "t": "Anruf vom Landratsamt",
-   "ru": "Звонок из Ландратсамта",
+   "ru": "dtz.hoeren.h4",
    "text": "Guten Tag Herr Melnyk, hier spricht Frau Hoffmann vom Landratsamt, Abteilung Staatsangehörigkeit. Ihr Antrag ist vollständig, nur die Gehaltsabrechnungen der letzten drei Monate fehlen noch. Bitte schicken Sie uns diese bis Ende des Monats per Post. Wenn Sie Fragen haben, rufen Sie mich dienstags oder donnerstags an.",
    "q": [
     {
@@ -216,7 +216,7 @@
   {
    "id": "h5",
    "t": "Radio: Wetter und Verkehr",
-   "ru": "Радио: погода и дороги",
+   "ru": "dtz.hoeren.h5",
    "text": "Und nun das Wetter für Sachsen: Am Vormittag noch Regen, ab Mittag wird es trocken und freundlich bei 14 Grad. Im Erzgebirge kann es in der Nacht Frost geben. Zum Verkehr: Auf der A17 zwischen Pirna und Dresden-Prohlis gibt es nach einem Unfall zehn Kilometer Stau.",
    "q": [
     {
@@ -244,7 +244,7 @@
   {
    "id": "h6",
    "t": "Gespräch beim Vermieter",
-   "ru": "Разговор с арендодателем",
+   "ru": "dtz.hoeren.h6",
    "text": "Frau Klein, ich habe Ihre Nachricht bekommen. Der Handwerker kann leider erst am Donnerstag kommen, nicht am Mittwoch. Er kommt zwischen 8 und 12 Uhr. Wenn Sie nicht da sind, kann der Hausmeister ihm die Wohnung aufschließen. Geben Sie mir bitte bis morgen Bescheid.",
    "q": [
     {
@@ -274,7 +274,7 @@
   {
    "id": "l1",
    "t": "Aushang im Treppenhaus",
-   "ru": "Объявление на лестнице",
+   "ru": "dtz.lesen.l1",
    "text": "Liebe Mieterinnen und Mieter,\nam Dienstag, dem 12. November, wird zwischen 9 und 13 Uhr das Wasser im ganzen Haus abgestellt. Grund sind Reparaturen an den Leitungen. Bitte füllen Sie sich vorher Wasser ab. Die Waschmaschinen im Keller können an diesem Tag erst ab 14 Uhr benutzt werden.\nIhre Hausverwaltung",
    "q": [
     {
@@ -302,7 +302,7 @@
   {
    "id": "l2",
    "t": "Brief vom Jobcenter (Auszug)",
-   "ru": "Письмо из джобцентра (отрывок)",
+   "ru": "dtz.lesen.l2",
    "text": "Sehr geehrte Frau Orlova,\nbitte kommen Sie am Montag, dem 4. März, um 10:30 Uhr in Zimmer 214. Wir möchten mit Ihnen über Ihre berufliche Situation sprechen. Bringen Sie bitte Ihren Lebenslauf und Ihre Zeugnisse mit. Wenn Sie den Termin nicht wahrnehmen können, teilen Sie uns dies bitte vorher mit. Ohne wichtigen Grund kann Ihre Leistung gemindert werden.",
    "q": [
     {
@@ -330,7 +330,7 @@
   {
    "id": "l3",
    "t": "Kursangebot der Volkshochschule",
-   "ru": "Предложение курсов народного университета",
+   "ru": "dtz.lesen.l3",
    "text": "Vorbereitung auf den Einbürgerungstest\nIn vier Abenden lernen Sie die wichtigsten Themen: Politik in der Demokratie, Geschichte und Verantwortung, Mensch und Gesellschaft. Kurszeiten: mittwochs 18–20:30 Uhr, Beginn 6. November. Gebühr: 49 Euro, ermäßigt 25 Euro. Anmeldung bis 30. Oktober online oder in der Geschäftsstelle. Der Test selbst kostet zusätzlich 25 Euro.",
    "q": [
     {
@@ -368,7 +368,7 @@
   {
    "id": "l4",
    "t": "Anzeige: Wohnung",
-   "ru": "Объявление: квартира",
+   "ru": "dtz.lesen.l4",
    "text": "Freital-Deuben: Helle 3-Zimmer-Wohnung, 68 m², 2. OG, Balkon, Einbauküche. Kaltmiete 480 €, Nebenkosten 170 €, Kaution 3 Kaltmieten. Haustiere nach Absprache. Frei ab 1. Dezember. Besichtigung nur nach telefonischer Vereinbarung: 0351 123456 (werktags 9–17 Uhr).",
    "q": [
     {
@@ -396,7 +396,7 @@
   {
    "id": "l5",
    "t": "Bescheid (Auszug)",
-   "ru": "Решение ведомства (отрывок)",
+   "ru": "dtz.lesen.l5",
    "text": "Ihr Antrag auf Elterngeld vom 15.08. wurde bewilligt. Sie erhalten ab dem 1. September monatlich 1.120,00 Euro für die Dauer von 12 Monaten. Rechtsbehelfsbelehrung: Gegen diesen Bescheid kann innerhalb eines Monats nach Bekanntgabe Widerspruch erhoben werden.",
    "q": [
     {
@@ -424,7 +424,7 @@
   {
    "id": "l6",
    "t": "E-Mail einer Kollegin",
-   "ru": "Письмо коллеги",
+   "ru": "dtz.lesen.l6",
    "text": "Hallo Dmitri,\nkannst du am Freitag meine Frühschicht übernehmen? Meine Tochter hat einen Arzttermin und mein Mann ist auf Dienstreise. Ich würde dafür nächste Woche am Samstag für dich arbeiten. Sag bitte bis morgen Bescheid, dann informiere ich den Schichtleiter.\nViele Grüße, Katrin",
    "q": [
     {
