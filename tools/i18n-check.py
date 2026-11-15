@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Prüft die Hilfssprachen: Jede ID aus den Daten und aus app.js muss in jeder Datei data/i18n/<code>.json stehen.
+"""Prüft die Hilfssprachen: Jede ID aus den Daten und aus js/ muss in jeder Datei data/i18n/<code>.json stehen.
 Meldet auch IDs, die nirgends mehr benutzt werden, und russischen Text, der versehentlich direkt im Code oder in den Daten steht.
 Aufruf im Projektordner: python3 tools/i18n-check.py   (kein Build-Schritt, nur eine Kontrolle)
 
 So funktionieren die Übersetzungen:
 - In den Daten stehen an den Stellen der Hilfssprache IDs (z. B. "ru": "q.g1", "dru": "info.steps.s1.dru").
-- Im Code stehen IDs in ru('ui.…') bzw. tr('ui.…').
+- Im Code (js/) stehen IDs in ru('ui.…'), ruSay('ui.…') bzw. tr('ui.…').
 - data/i18n/ru.json, en.json, tr.json, ar.json, pl.json, ro.json ordnen jeder ID den Text zu.
 Einen Text verbessern: nur den Wert in der jeweiligen Sprachdatei ändern. Neuen Text anlegen: neue ID + Eintrag in allen sechs Dateien."""
 import json, re, glob, sys
@@ -20,12 +20,12 @@ def walk(x, f):
     elif isinstance(x, list): [walk(v, f) for v in x]
     elif isinstance(x, dict): [walk(v, f) for v in x.values()]
 for f in glob.glob('data/*.json'): walk(json.load(open(f, encoding='utf-8')), f)
-for f in ['app.js'] + glob.glob('js/**/*.js', recursive=True):
+for f in glob.glob('js/**/*.js', recursive=True):
     src = open(f, encoding='utf-8').read()
     used |= set(re.findall(r"'(ui\.[\w-]+)'", src))
     # Sprachnamen und Begrüßung stehen absichtlich in der jeweiligen Sprache (LANG, WELCOME)
     for line in src.split('\n'):
-        if cyr.search(line) and not re.search(r"^\s*ru: \{|^const WELCOME", line): stray.append(f'{f}: {line.strip()[:80]}')
+        if cyr.search(line) and not re.search(r"^\s*ru: \{|^(export )?const WELCOME", line): stray.append(f'{f}: {line.strip()[:80]}')
 bad = len(stray)
 for s in stray: print('Russischer Text direkt im Code/in den Daten (bitte als ID anlegen):', s)
 for l in LANGS:

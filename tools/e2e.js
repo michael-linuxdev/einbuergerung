@@ -71,6 +71,25 @@ let failed = 0;
   await p.click('[data-act="imp-ok"]'); await p.waitForTimeout(400);
   ok(await p.evaluate(() => JSON.parse(localStorage.getItem('eb.profiles')).list.length) === 1, 'Sicherung geladen, Profile ersetzt');
 
+  // Vereinfachungen: Startseite, Menü, Reiter, Fristen, Vorlese-Knöpfe, Schritte abhaken
+  await p.goto(BASE + '#start'); await p.waitForSelector('.hero');
+  ok(await p.locator('.stamps, .st').count() === 0 && await p.locator('.doc .progress').count() === 1, 'Startseite: Fortschrittsbalken statt Stempel');
+  await p.goto(BASE + '#mehr'); await p.waitForSelector('.tile');
+  ok(await p.locator('.tile').count() <= 10, `„Mehr“ hat ${await p.locator('.tile').count()} Einträge (vorher 19)`);
+  for (const [r, tab] of [['kosten', 'Kosten'], ['termine', 'Mitbringen'], ['briefe', 'Briefe']]) {
+    await p.goto(BASE + '#' + r); await p.waitForSelector('.tabs a.on');
+    ok((await p.textContent('.tabs a.on')).trim() === tab, `Alte Adresse #${r} öffnet Unterlagen › ${tab}`);
+  }
+  await p.goto(BASE + '#fristen'); await p.waitForSelector('#fristen');
+  ok((await p.textContent('h1')).includes('Fristen'), 'Alte Adresse #fristen öffnet „Voraussetzungen & Fristen“');
+  await p.goto(BASE + '#sprache'); await p.click('[data-lang="ru"]'); await p.waitForTimeout(200);
+  await p.goto(BASE + '#lernen'); await p.waitForSelector('.opt');
+  ok(await p.locator('.opt .say').count() === 0 && await p.locator('.q-text .say').count() >= 1, 'Antworten ohne eigene Vorlese-Knöpfe, Frage mit Knopf');
+  await p.goto(BASE + '#start'); await p.waitForSelector('.hero');
+  await p.evaluate(() => document.querySelector('details.level').open = true);
+  await p.click('[data-ms="antrag"]'); await p.waitForTimeout(150);
+  ok(await p.evaluate(() => JSON.parse(localStorage.getItem('eb.v1')).milestones?.antrag === true), 'Schritt „Antrag stellen“ lässt sich abhaken');
+
   // Alle Seiten in jeder Sprache
   const routes = ['start', 'test', 'lernen', 'pruefung', 'katalog', 'kurs', 'lektion--a1-1', 'lektion--a1-1--vok', 'lektion--a1-1--ue', 'vokabeln', 'dtz', 'docs', 'amt', 'check', 'briefe', 'einstellungen', 'mehr', 'plan', 'lebenslauf', 'kosten', 'fristen', 'installieren', 'audio', 'termine', 'glossar', 'profil', 'gespraech', 'waehlen', 'teilen', 'sprache', 'tutorial', 'dtz--schreiben--gibtsnicht', '%E0%A4'];
   for (const l of ['ru', 'en', 'tr', 'ar', 'pl', 'ro', 'de']) {

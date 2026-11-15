@@ -376,5 +376,5 @@ body.onboarding .nag{left:0}
 .mb-s{margin-bottom:6px}.mb{margin-bottom:12px}.mb-l{margin-bottom:16px}.m-0{margin:0}
 .center{text-align:center}.center-x{justify-content:center}.grow{flex:1;min-width:0}.full{grid-column:1/-1}.nowrap{flex-wrap:nowrap}.scroll-x{overflow-x:auto}
 .fs-1{font-size:1em}.fs-105{font-size:1.05em}.c-bad{color:var(--bad)}.c-warn{color:var(--warn)}.ampel.none{background:var(--line)}
-.tabs a{flex:1;text-align:center;border-bottom:3px solid transparent;padding:10px 12px;white-space:nowrap;font-weight:600;color:var(--ink-3);text-decoration:none}
+.tabs a{flex:1 0 auto;text-align:center;border-bottom:3px solid transparent;padding:10px 8px;font-size:.92em;white-space:nowrap;font-weight:600;color:var(--ink-3);text-decoration:none}
 .tabs a.on{color:var(--brand);border-bottom-color:var(--brand)}

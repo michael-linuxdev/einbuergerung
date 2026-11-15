@@ -3,7 +3,8 @@
 // Code und Daten kommen immer aus demselben Cache – so passen sie zusammen, bis der Nutzer „Jetzt laden“ tippt.
 const CACHE = 'eb-v1.6.0';
 const ASSETS = [
-  './', 'index.html', 'app.css', 'app.js', 'manifest.webmanifest',
+  './', 'index.html', 'app.css', 'manifest.webmanifest',
+  'js/core.js', 'js/data.js', 'js/i18n.js', 'js/install.js', 'js/main.js', 'js/router.js', 'js/speech.js', 'js/store.js', 'js/views/amt.js', 'js/views/app.js', 'js/views/check.js', 'js/views/docs.js', 'js/views/kurs.js', 'js/views/plan.js', 'js/views/start.js', 'js/views/test.js',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png',
   'data/questions.json', 'data/info.json', 'data/behoerden-sn.json',
   'data/kurs-a1.json', 'data/kurs-a2.json', 'data/kurs-b1.json', 'data/dtz.json', 'data/glossar.json', 'fonts/Lora-Variable.ttf',
