@@ -3,119 +3,119 @@
   "id": "a1-1",
   "lv": "A1",
   "t": "Hallo! Sich vorstellen",
-  "ru": "Привет! Представиться",
+  "ru": "k.a1-1",
   "gr": {
    "t": "Verb sein & heißen, Personalpronomen",
-   "ru": "Глагол sein (быть) и heißen (называться), личные местоимения",
+   "ru": "k.a1-1.gr",
    "de": "Im Deutschen steht das Verb im Aussagesatz an Position 2. „sein“ ist unregelmäßig: ich bin, du bist, er/sie/es ist, wir sind, ihr seid, sie/Sie sind. „Sie“ (groß) ist die höfliche Anrede – bei Behörden immer „Sie“.",
-   "rde": "В немецком повествовательном предложении глагол стоит на втором месте. Глагол «sein» неправильный: ich bin, du bist, er/sie/es ist, wir sind, ihr seid, sie/Sie sind. «Sie» с большой буквы — вежливое обращение («Вы»). В ведомствах всегда говорят «Sie».",
+   "rde": "k.a1-1.gr.rde",
    "ex": [
     [
      "Ich bin Olga.",
-     "Я Ольга."
+     "k.a1-1.gr.ex.0.1"
     ],
     [
      "Wie heißen Sie?",
-     "Как Вас зовут?"
+     "k.a1-1.gr.ex.1.1"
     ],
     [
      "Ich heiße Andrej Petrow.",
-     "Меня зовут Андрей Петров."
+     "k.a1-1.gr.ex.2.1"
     ],
     [
      "Woher kommen Sie? – Ich komme aus der Ukraine.",
-     "Откуда Вы? — Я из Украины."
+     "k.a1-1.gr.ex.3.1"
     ]
    ]
   },
   "vok": [
    [
     "Hallo",
-    "привет"
+    "k.a1-1.vok.0.1"
    ],
    [
     "Guten Morgen",
-    "доброе утро"
+    "k.a1-1.vok.1.1"
    ],
    [
     "Guten Tag",
-    "добрый день"
+    "k.a1-1.vok.2.1"
    ],
    [
     "Guten Abend",
-    "добрый вечер"
+    "k.a1-1.vok.3.1"
    ],
    [
     "Auf Wiedersehen",
-    "до свидания"
+    "k.a1-1.vok.4.1"
    ],
    [
     "Tschüss",
-    "пока"
+    "k.a1-1.vok.5.1"
    ],
    [
     "der Name",
-    "имя, фамилия"
+    "k.a1-1.vok.6.1"
    ],
    [
     "der Vorname",
-    "имя"
+    "k.a1-1.vok.7.1"
    ],
    [
     "der Nachname",
-    "фамилия"
+    "k.a1-1.vok.8.1"
    ],
    [
     "kommen aus",
-    "быть родом из"
+    "k.a1-1.vok.9.1"
    ],
    [
     "wohnen",
-    "жить (проживать)"
+    "k.a1-1.vok.10.1"
    ],
    [
     "sprechen",
-    "говорить"
+    "k.a1-1.vok.11.1"
    ],
    [
     "Danke",
-    "спасибо"
+    "k.a1-1.vok.12.1"
    ],
    [
     "Bitte",
-    "пожалуйста"
+    "k.a1-1.vok.13.1"
    ]
   ],
   "dia": [
    [
     "A",
     "Guten Tag! Mein Name ist Müller. Wie heißen Sie?",
-    "Добрый день! Моя фамилия Мюллер. Как Вас зовут?"
+    "k.a1-1.dia.0.2"
    ],
    [
     "B",
     "Guten Tag! Ich heiße Irina Smirnova.",
-    "Добрый день! Меня зовут Ирина Смирнова."
+    "k.a1-1.dia.1.2"
    ],
    [
     "A",
     "Woher kommen Sie, Frau Smirnova?",
-    "Откуда Вы, госпожа Смирнова?"
+    "k.a1-1.dia.2.2"
    ],
    [
     "B",
     "Ich komme aus Kasachstan. Ich wohne jetzt in Dresden.",
-    "Я из Казахстана. Сейчас я живу в Дрездене."
+    "k.a1-1.dia.3.2"
    ],
    [
     "A",
     "Sprechen Sie Deutsch?",
-    "Вы говорите по-немецки?"
+    "k.a1-1.dia.4.2"
    ],
    [
     "B",
     "Ja, ein bisschen.",
-    "Да, немного."
+    "k.a1-1.dia.5.2"
    ]
   ],
   "ue": [
@@ -178,114 +178,114 @@
   "id": "a1-2",
   "lv": "A1",
   "t": "Zahlen, Alphabet, Telefonnummer",
-  "ru": "Числа, алфавит, номер телефона",
+  "ru": "k.a1-2",
   "gr": {
    "t": "Zahlen 0–100 und Buchstabieren",
-   "ru": "Числа 0–100 и произношение по буквам",
+   "ru": "k.a1-2.gr",
    "de": "Zahlen ab 21 sagt man „von hinten“: 21 = einundzwanzig (eins + und + zwanzig). Bei Behörden musst du oft deinen Namen buchstabieren: A wie Anton, B wie Berta …",
-   "rde": "Числа начиная с 21 произносятся «с конца»: 21 = einundzwanzig (один и двадцать). В ведомствах часто просят продиктовать фамилию по буквам: A как Anton, B как Berta …",
+   "rde": "k.a1-2.gr.rde",
    "ex": [
     [
      "dreiundvierzig = 43",
-     "43"
+     "k.a1-2.gr.ex.0.1"
     ],
     [
      "siebenundneunzig = 97",
-     "97"
+     "k.a1-2.gr.ex.1.1"
     ],
     [
      "Können Sie das bitte buchstabieren?",
-     "Не могли бы Вы произнести это по буквам?"
+     "k.a1-2.gr.ex.2.1"
     ],
     [
      "Meine Telefonnummer ist 0176 …",
-     "Мой номер телефона 0176 …"
+     "k.a1-2.gr.ex.3.1"
     ]
    ]
   },
   "vok": [
    [
     "null",
-    "ноль"
+    "k.a1-2.vok.0.1"
    ],
    [
     "eins",
-    "один"
+    "k.a1-2.vok.1.1"
    ],
    [
     "zwei",
-    "два"
+    "k.a1-2.vok.2.1"
    ],
    [
     "drei",
-    "три"
+    "k.a1-2.vok.3.1"
    ],
    [
     "zehn",
-    "десять"
+    "k.a1-2.vok.4.1"
    ],
    [
     "zwölf",
-    "двенадцать"
+    "k.a1-2.vok.5.1"
    ],
    [
     "zwanzig",
-    "двадцать"
+    "k.a1-2.vok.6.1"
    ],
    [
     "dreißig",
-    "тридцать"
+    "k.a1-2.vok.7.1"
    ],
    [
     "hundert",
-    "сто"
+    "k.a1-2.vok.8.1"
    ],
    [
     "die Telefonnummer",
-    "номер телефона"
+    "k.a1-2.vok.9.1"
    ],
    [
     "die Hausnummer",
-    "номер дома"
+    "k.a1-2.vok.10.1"
    ],
    [
     "die Postleitzahl",
-    "почтовый индекс"
+    "k.a1-2.vok.11.1"
    ],
    [
     "buchstabieren",
-    "произносить по буквам"
+    "k.a1-2.vok.12.1"
    ],
    [
     "wiederholen",
-    "повторять"
+    "k.a1-2.vok.13.1"
    ]
   ],
   "dia": [
    [
     "A",
     "Wie ist Ihre Telefonnummer?",
-    "Какой у Вас номер телефона?"
+    "k.a1-2.dia.0.2"
    ],
    [
     "B",
     "0151 23 45 67 8.",
-    "0151 23 45 67 8."
+    "k.a1-2.dia.1.2"
    ],
    [
     "A",
     "Und wie ist Ihr Nachname?",
-    "А какая у Вас фамилия?"
+    "k.a1-2.dia.2.2"
    ],
    [
     "B",
     "Kowalenko. K – O – W – A – L – E – N – K – O.",
-    "Коваленко. K – O – W – A – L – E – N – K – O."
+    "k.a1-2.dia.3.2"
    ],
    [
     "A",
     "Können Sie das bitte wiederholen?",
-    "Не могли бы Вы повторить?"
+    "k.a1-2.dia.4.2"
    ]
   ],
   "ue": [
@@ -347,113 +347,113 @@
   "id": "a1-3",
   "lv": "A1",
   "t": "Familie",
-  "ru": "Семья",
+  "ru": "k.a1-3",
   "gr": {
    "t": "Possessivartikel mein/meine, dein/deine",
-   "ru": "Притяжательные местоимения mein/meine, dein/deine",
+   "ru": "k.a1-3.gr",
    "de": "Deutsche Nomen haben ein Genus: der (maskulin), die (feminin), das (neutral). Possessivartikel richten sich danach: mein Vater (der), meine Mutter (die), mein Kind (das), meine Kinder (Plural). Lerne jedes Nomen mit Artikel!",
-   "rde": "У немецких существительных есть род: der (мужской), die (женский), das (средний). Притяжательные местоимения согласуются с ним: mein Vater (der), meine Mutter (die), mein Kind (das), meine Kinder (мн. ч.). Учите каждое существительное с артиклем!",
+   "rde": "k.a1-3.gr.rde",
    "ex": [
     [
      "Das ist meine Frau.",
-     "Это моя жена."
+     "k.a1-3.gr.ex.0.1"
     ],
     [
      "Mein Sohn ist fünf Jahre alt.",
-     "Моему сыну пять лет."
+     "k.a1-3.gr.ex.1.1"
     ],
     [
      "Hast du Geschwister?",
-     "У тебя есть братья или сёстры?"
+     "k.a1-3.gr.ex.2.1"
     ],
     [
      "Ich bin verheiratet und habe zwei Kinder.",
-     "Я женат/замужем, у меня двое детей."
+     "k.a1-3.gr.ex.3.1"
     ]
    ]
   },
   "vok": [
    [
     "die Familie",
-    "семья"
+    "k.a1-3.vok.0.1"
    ],
    [
     "der Vater",
-    "отец"
+    "k.a1-3.vok.1.1"
    ],
    [
     "die Mutter",
-    "мать"
+    "k.a1-3.vok.2.1"
    ],
    [
     "die Eltern",
-    "родители"
+    "k.a1-3.vok.3.1"
    ],
    [
     "der Sohn",
-    "сын"
+    "k.a1-3.vok.4.1"
    ],
    [
     "die Tochter",
-    "дочь"
+    "k.a1-3.vok.5.1"
    ],
    [
     "das Kind, die Kinder",
-    "ребёнок, дети"
+    "k.a1-3.vok.6.1"
    ],
    [
     "der Bruder",
-    "брат"
+    "k.a1-3.vok.7.1"
    ],
    [
     "die Schwester",
-    "сестра"
+    "k.a1-3.vok.8.1"
    ],
    [
     "der Mann",
-    "муж; мужчина"
+    "k.a1-3.vok.9.1"
    ],
    [
     "die Frau",
-    "жена; женщина"
+    "k.a1-3.vok.10.1"
    ],
    [
     "verheiratet",
-    "женат / замужем"
+    "k.a1-3.vok.11.1"
    ],
    [
     "ledig",
-    "холост / не замужем"
+    "k.a1-3.vok.12.1"
    ],
    [
     "geschieden",
-    "разведён(а)"
+    "k.a1-3.vok.13.1"
    ],
    [
     "das Baby",
-    "младенец"
+    "k.a1-3.vok.14.1"
    ]
   ],
   "dia": [
    [
     "A",
     "Sind Sie verheiratet?",
-    "Вы состоите в браке?"
+    "k.a1-3.dia.0.2"
    ],
    [
     "B",
     "Ja. Mein Mann heißt Sergej. Wir haben eine Tochter.",
-    "Да. Моего мужа зовут Сергей. У нас есть дочь."
+    "k.a1-3.dia.1.2"
    ],
    [
     "A",
     "Wie alt ist Ihre Tochter?",
-    "Сколько лет Вашей дочери?"
+    "k.a1-3.dia.2.2"
    ],
    [
     "B",
     "Sie ist acht. Sie geht in die Schule.",
-    "Ей восемь. Она ходит в школу."
+    "k.a1-3.dia.3.2"
    ]
   ],
   "ue": [
@@ -521,114 +521,114 @@
   "id": "a1-4",
   "lv": "A1",
   "t": "Essen und Einkaufen",
-  "ru": "Еда и покупки",
+  "ru": "k.a1-4",
   "gr": {
    "t": "Akkusativ: einen, eine, ein – kein",
-   "ru": "Винительный падеж: einen, eine, ein — kein",
+   "ru": "k.a1-4.gr",
    "de": "Nach „haben“, „kaufen“, „möchten“ steht der Akkusativ. Nur maskuline Artikel ändern sich: der → den, ein → einen. Verneinung von Nomen mit „kein“: Ich habe keinen Hunger.",
-   "rde": "После «haben», «kaufen», «möchten» используется винительный падеж (Akkusativ). Меняются только артикли мужского рода: der → den, ein → einen. Отрицание существительного — с «kein»: Ich habe keinen Hunger (Я не голоден).",
+   "rde": "k.a1-4.gr.rde",
    "ex": [
     [
      "Ich möchte einen Kaffee.",
-     "Я хотел(а) бы кофе."
+     "k.a1-4.gr.ex.0.1"
     ],
     [
      "Ich kaufe eine Milch und ein Brot.",
-     "Я покупаю молоко и хлеб."
+     "k.a1-4.gr.ex.1.1"
     ],
     [
      "Haben Sie keine Äpfel?",
-     "У Вас нет яблок?"
+     "k.a1-4.gr.ex.2.1"
     ],
     [
      "Was kostet das? – Das kostet 2,50 Euro.",
-     "Сколько это стоит? — Это стоит 2,50 евро."
+     "k.a1-4.gr.ex.3.1"
     ]
    ]
   },
   "vok": [
    [
     "das Brot",
-    "хлеб"
+    "k.a1-4.vok.0.1"
    ],
    [
     "die Milch",
-    "молоко"
+    "k.a1-4.vok.1.1"
    ],
    [
     "der Käse",
-    "сыр"
+    "k.a1-4.vok.2.1"
    ],
    [
     "das Fleisch",
-    "мясо"
+    "k.a1-4.vok.3.1"
    ],
    [
     "das Gemüse",
-    "овощи"
+    "k.a1-4.vok.4.1"
    ],
    [
     "das Obst",
-    "фрукты"
+    "k.a1-4.vok.5.1"
    ],
    [
     "der Apfel",
-    "яблоко"
+    "k.a1-4.vok.6.1"
    ],
    [
     "die Kartoffel",
-    "картофель"
+    "k.a1-4.vok.7.1"
    ],
    [
     "das Wasser",
-    "вода"
+    "k.a1-4.vok.8.1"
    ],
    [
     "kaufen",
-    "покупать"
+    "k.a1-4.vok.9.1"
    ],
    [
     "kosten",
-    "стоить"
+    "k.a1-4.vok.10.1"
    ],
    [
     "der Supermarkt",
-    "супермаркет"
+    "k.a1-4.vok.11.1"
    ],
    [
     "die Kasse",
-    "касса"
+    "k.a1-4.vok.12.1"
    ],
    [
     "billig / teuer",
-    "дешёвый / дорогой"
+    "k.a1-4.vok.13.1"
    ]
   ],
   "dia": [
    [
     "A",
     "Guten Tag, was möchten Sie?",
-    "Добрый день, что Вы хотите?"
+    "k.a1-4.dia.0.2"
    ],
    [
     "B",
     "Ich möchte ein Brot und 200 Gramm Käse, bitte.",
-    "Я хотел бы хлеб и 200 граммов сыра, пожалуйста."
+    "k.a1-4.dia.1.2"
    ],
    [
     "A",
     "Sonst noch etwas?",
-    "Что-нибудь ещё?"
+    "k.a1-4.dia.2.2"
    ],
    [
     "B",
     "Nein, danke. Was kostet das?",
-    "Нет, спасибо. Сколько это стоит?"
+    "k.a1-4.dia.3.2"
    ],
    [
     "A",
     "Das macht 6,40 Euro.",
-    "С Вас 6,40 евро."
+    "k.a1-4.dia.4.2"
    ]
   ],
   "ue": [
@@ -686,105 +686,105 @@
   "id": "a1-5",
   "lv": "A1",
   "t": "Wohnen",
-  "ru": "Жильё",
+  "ru": "k.a1-5",
   "gr": {
    "t": "Adjektive nach sein, Negation mit nicht",
-   "ru": "Прилагательные после sein, отрицание с nicht",
+   "ru": "k.a1-5.gr",
    "de": "Nach „sein“ bleibt das Adjektiv unverändert: Die Wohnung ist groß. Verben und Adjektive verneint man mit „nicht“: Die Wohnung ist nicht teuer. Nomen mit „kein“.",
-   "rde": "После «sein» прилагательное не изменяется: Die Wohnung ist groß (Квартира большая). Глаголы и прилагательные отрицаются с помощью «nicht»: Die Wohnung ist nicht teuer. Существительные — с помощью «kein».",
+   "rde": "k.a1-5.gr.rde",
    "ex": [
     [
      "Meine Wohnung hat drei Zimmer.",
-     "В моей квартире три комнаты."
+     "k.a1-5.gr.ex.0.1"
     ],
     [
      "Die Küche ist klein, aber hell.",
-     "Кухня маленькая, но светлая."
+     "k.a1-5.gr.ex.1.1"
     ],
     [
      "Die Miete ist nicht hoch.",
-     "Арендная плата невысокая."
+     "k.a1-5.gr.ex.2.1"
     ],
     [
      "Wir suchen eine Wohnung in Pirna.",
-     "Мы ищем квартиру в Пирне."
+     "k.a1-5.gr.ex.3.1"
     ]
    ]
   },
   "vok": [
    [
     "die Wohnung",
-    "квартира"
+    "k.a1-5.vok.0.1"
    ],
    [
     "das Zimmer",
-    "комната"
+    "k.a1-5.vok.1.1"
    ],
    [
     "die Küche",
-    "кухня"
+    "k.a1-5.vok.2.1"
    ],
    [
     "das Bad",
-    "ванная"
+    "k.a1-5.vok.3.1"
    ],
    [
     "das Schlafzimmer",
-    "спальня"
+    "k.a1-5.vok.4.1"
    ],
    [
     "der Balkon",
-    "балкон"
+    "k.a1-5.vok.5.1"
    ],
    [
     "die Miete",
-    "арендная плата"
+    "k.a1-5.vok.6.1"
    ],
    [
     "der Vermieter",
-    "арендодатель"
+    "k.a1-5.vok.7.1"
    ],
    [
     "groß / klein",
-    "большой / маленький"
+    "k.a1-5.vok.8.1"
    ],
    [
     "hell / dunkel",
-    "светлый / тёмный"
+    "k.a1-5.vok.9.1"
    ],
    [
     "ruhig / laut",
-    "тихий / шумный"
+    "k.a1-5.vok.10.1"
    ],
    [
     "umziehen",
-    "переезжать"
+    "k.a1-5.vok.11.1"
    ],
    [
     "die Nebenkosten",
-    "коммунальные расходы"
+    "k.a1-5.vok.12.1"
    ]
   ],
   "dia": [
    [
     "A",
     "Wie ist deine neue Wohnung?",
-    "Как твоя новая квартира?"
+    "k.a1-5.dia.0.2"
    ],
    [
     "B",
     "Sie ist schön! Sie hat zwei Zimmer, eine Küche und einen Balkon.",
-    "Она красивая! В ней две комнаты, кухня и балкон."
+    "k.a1-5.dia.1.2"
    ],
    [
     "A",
     "Ist sie teuer?",
-    "Она дорогая?"
+    "k.a1-5.dia.2.2"
    ],
    [
     "B",
     "Nein, nicht sehr. Die Miete ist 550 Euro warm.",
-    "Нет, не очень. Аренда 550 евро вместе с отоплением."
+    "k.a1-5.dia.3.2"
    ]
   ],
   "ue": [
@@ -843,109 +843,109 @@
   "id": "a1-6",
   "lv": "A1",
   "t": "Tagesablauf und Uhrzeit",
-  "ru": "Распорядок дня и время",
+  "ru": "k.a1-6",
   "gr": {
    "t": "Trennbare Verben, Uhrzeit",
-   "ru": "Глаголы с отделяемыми приставками, время",
+   "ru": "k.a1-6.gr",
    "de": "Bei trennbaren Verben steht die Vorsilbe am Satzende: aufstehen → Ich stehe um 6 Uhr auf. Weitere: einkaufen, anrufen, fernsehen. Uhrzeit offiziell: 14:30 = vierzehn Uhr dreißig; informell: halb drei.",
-   "rde": "У глаголов с отделяемой приставкой приставка уходит в конец предложения: aufstehen → Ich stehe um 6 Uhr auf (Я встаю в 6 часов). Другие: einkaufen, anrufen, fernsehen. Официально время: 14:30 = vierzehn Uhr dreißig; разговорно: halb drei (половина третьего).",
+   "rde": "k.a1-6.gr.rde",
    "ex": [
     [
      "Ich stehe um halb sieben auf.",
-     "Я встаю в половине седьмого."
+     "k.a1-6.gr.ex.0.1"
     ],
     [
      "Um acht Uhr fängt die Arbeit an.",
-     "В восемь часов начинается работа."
+     "k.a1-6.gr.ex.1.1"
     ],
     [
      "Am Abend rufe ich meine Mutter an.",
-     "Вечером я звоню маме."
+     "k.a1-6.gr.ex.2.1"
     ],
     [
      "Wie spät ist es? – Es ist Viertel nach zehn.",
-     "Который час? — Четверть одиннадцатого."
+     "k.a1-6.gr.ex.3.1"
     ]
    ]
   },
   "vok": [
    [
     "aufstehen",
-    "вставать"
+    "k.a1-6.vok.0.1"
    ],
    [
     "frühstücken",
-    "завтракать"
+    "k.a1-6.vok.1.1"
    ],
    [
     "arbeiten",
-    "работать"
+    "k.a1-6.vok.2.1"
    ],
    [
     "einkaufen",
-    "делать покупки"
+    "k.a1-6.vok.3.1"
    ],
    [
     "anrufen",
-    "звонить"
+    "k.a1-6.vok.4.1"
    ],
    [
     "fernsehen",
-    "смотреть телевизор"
+    "k.a1-6.vok.5.1"
    ],
    [
     "schlafen",
-    "спать"
+    "k.a1-6.vok.6.1"
    ],
    [
     "der Morgen",
-    "утро"
+    "k.a1-6.vok.7.1"
    ],
    [
     "der Mittag",
-    "полдень"
+    "k.a1-6.vok.8.1"
    ],
    [
     "der Abend",
-    "вечер"
+    "k.a1-6.vok.9.1"
    ],
    [
     "die Uhr",
-    "часы; час"
+    "k.a1-6.vok.10.1"
    ],
    [
     "halb",
-    "половина"
+    "k.a1-6.vok.11.1"
    ],
    [
     "Viertel",
-    "четверть"
+    "k.a1-6.vok.12.1"
    ],
    [
     "anfangen",
-    "начинать(ся)"
+    "k.a1-6.vok.13.1"
    ]
   ],
   "dia": [
    [
     "A",
     "Wann stehst du auf?",
-    "Когда ты встаёшь?"
+    "k.a1-6.dia.0.2"
    ],
    [
     "B",
     "Um sechs Uhr. Ich bringe die Kinder um halb acht in die Kita.",
-    "В шесть. В половине восьмого я отвожу детей в детский сад."
+    "k.a1-6.dia.1.2"
    ],
    [
     "A",
     "Und dann?",
-    "А потом?"
+    "k.a1-6.dia.2.2"
    ],
    [
     "B",
     "Dann fange ich um acht mit der Arbeit an.",
-    "Потом в восемь начинаю работать."
+    "k.a1-6.dia.3.2"
    ]
   ],
   "ue": [
@@ -1004,109 +1004,109 @@
   "id": "a1-7",
   "lv": "A1",
   "t": "In der Stadt: Wege und Verkehr",
-  "ru": "В городе: дорога и транспорт",
+  "ru": "k.a1-7",
   "gr": {
    "t": "Präpositionen mit Dativ: mit, zu, bei, von, aus, nach",
-   "ru": "Предлоги с дательным падежом: mit, zu, bei, von, aus, nach",
+   "ru": "k.a1-7.gr",
    "de": "Nach mit, zu, bei, von, aus, nach, seit steht immer der Dativ: der → dem, das → dem, die → der. Ich fahre mit dem Bus. Ich gehe zum (= zu dem) Arzt. Zur (= zu der) Post.",
-   "rde": "После mit, zu, bei, von, aus, nach, seit всегда дательный падеж: der → dem, das → dem, die → der. Ich fahre mit dem Bus (Я еду на автобусе). Ich gehe zum (= zu dem) Arzt (Я иду к врачу). Zur (= zu der) Post (на почту).",
+   "rde": "k.a1-7.gr.rde",
    "ex": [
     [
      "Wie komme ich zum Bahnhof?",
-     "Как мне пройти к вокзалу?"
+     "k.a1-7.gr.ex.0.1"
     ],
     [
      "Gehen Sie geradeaus und dann links.",
-     "Идите прямо, а потом налево."
+     "k.a1-7.gr.ex.1.1"
     ],
     [
      "Ich fahre mit der S-Bahn nach Dresden.",
-     "Я еду на электричке в Дрезден."
+     "k.a1-7.gr.ex.2.1"
     ],
     [
      "Das Landratsamt ist neben der Post.",
-     "Районная администрация находится рядом с почтой."
+     "k.a1-7.gr.ex.3.1"
     ]
    ]
   },
   "vok": [
    [
     "der Bahnhof",
-    "вокзал"
+    "k.a1-7.vok.0.1"
    ],
    [
     "die Haltestelle",
-    "остановка"
+    "k.a1-7.vok.1.1"
    ],
    [
     "der Bus",
-    "автобус"
+    "k.a1-7.vok.2.1"
    ],
    [
     "die Straßenbahn",
-    "трамвай"
+    "k.a1-7.vok.3.1"
    ],
    [
     "der Zug",
-    "поезд"
+    "k.a1-7.vok.4.1"
    ],
    [
     "die Fahrkarte",
-    "билет"
+    "k.a1-7.vok.5.1"
    ],
    [
     "geradeaus",
-    "прямо"
+    "k.a1-7.vok.6.1"
    ],
    [
     "links / rechts",
-    "налево / направо"
+    "k.a1-7.vok.7.1"
    ],
    [
     "die Ampel",
-    "светофор"
+    "k.a1-7.vok.8.1"
    ],
    [
     "die Kreuzung",
-    "перекрёсток"
+    "k.a1-7.vok.9.1"
    ],
    [
     "das Rathaus",
-    "ратуша, мэрия"
+    "k.a1-7.vok.10.1"
    ],
    [
     "die Post",
-    "почта"
+    "k.a1-7.vok.11.1"
    ],
    [
     "fahren",
-    "ехать"
+    "k.a1-7.vok.12.1"
    ],
    [
     "umsteigen",
-    "делать пересадку"
+    "k.a1-7.vok.13.1"
    ]
   ],
   "dia": [
    [
     "A",
     "Entschuldigung, wie komme ich zum Rathaus?",
-    "Извините, как мне пройти к ратуше?"
+    "k.a1-7.dia.0.2"
    ],
    [
     "B",
     "Gehen Sie hier geradeaus bis zur Ampel. Dann rechts.",
-    "Идите прямо до светофора. Потом направо."
+    "k.a1-7.dia.1.2"
    ],
    [
     "A",
     "Ist das weit?",
-    "Это далеко?"
+    "k.a1-7.dia.2.2"
    ],
    [
     "B",
     "Nein, nur fünf Minuten zu Fuß.",
-    "Нет, всего пять минут пешком."
+    "k.a1-7.dia.3.2"
    ]
   ],
   "ue": [
@@ -1165,109 +1165,109 @@
   "id": "a1-8",
   "lv": "A1",
   "t": "Gesundheit und Arzt",
-  "ru": "Здоровье и врач",
+  "ru": "k.a1-8",
   "gr": {
    "t": "Modalverben können, müssen, dürfen; Imperativ (Sie)",
-   "ru": "Модальные глаголы können, müssen, dürfen; повелительное наклонение (Sie)",
+   "ru": "k.a1-8.gr",
    "de": "Modalverb an Position 2, Infinitiv am Ende: Ich muss zum Arzt gehen. Formen: ich kann/muss/darf, du kannst/musst/darfst. Höfliche Aufforderung: Nehmen Sie die Tabletten dreimal täglich.",
-   "rde": "Модальный глагол на втором месте, инфинитив в конце: Ich muss zum Arzt gehen (Мне нужно пойти к врачу). Формы: ich kann/muss/darf, du kannst/musst/darfst. Вежливая просьба: Nehmen Sie die Tabletten dreimal täglich (Принимайте таблетки три раза в день).",
+   "rde": "k.a1-8.gr.rde",
    "ex": [
     [
      "Mir tut der Kopf weh.",
-     "У меня болит голова."
+     "k.a1-8.gr.ex.0.1"
     ],
     [
      "Ich brauche einen Termin.",
-     "Мне нужна запись (на приём)."
+     "k.a1-8.gr.ex.1.1"
     ],
     [
      "Sie dürfen heute nicht arbeiten.",
-     "Вам сегодня нельзя работать."
+     "k.a1-8.gr.ex.2.1"
     ],
     [
      "Bringen Sie bitte Ihre Versichertenkarte mit.",
-     "Пожалуйста, возьмите с собой страховую карточку."
+     "k.a1-8.gr.ex.3.1"
     ]
    ]
   },
   "vok": [
    [
     "der Arzt / die Ärztin",
-    "врач"
+    "k.a1-8.vok.0.1"
    ],
    [
     "die Praxis",
-    "врачебный кабинет"
+    "k.a1-8.vok.1.1"
    ],
    [
     "der Termin",
-    "приём, назначенное время"
+    "k.a1-8.vok.2.1"
    ],
    [
     "krank / gesund",
-    "больной / здоровый"
+    "k.a1-8.vok.3.1"
    ],
    [
     "der Kopf",
-    "голова"
+    "k.a1-8.vok.4.1"
    ],
    [
     "der Bauch",
-    "живот"
+    "k.a1-8.vok.5.1"
    ],
    [
     "der Rücken",
-    "спина"
+    "k.a1-8.vok.6.1"
    ],
    [
     "das Fieber",
-    "температура (жар)"
+    "k.a1-8.vok.7.1"
    ],
    [
     "die Tablette",
-    "таблетка"
+    "k.a1-8.vok.8.1"
    ],
    [
     "das Rezept",
-    "рецепт"
+    "k.a1-8.vok.9.1"
    ],
    [
     "die Apotheke",
-    "аптека"
+    "k.a1-8.vok.10.1"
    ],
    [
     "die Krankmeldung",
-    "больничный лист"
+    "k.a1-8.vok.11.1"
    ],
    [
     "die Versichertenkarte",
-    "карточка медицинского страхования"
+    "k.a1-8.vok.12.1"
    ],
    [
     "wehtun",
-    "болеть"
+    "k.a1-8.vok.13.1"
    ]
   ],
   "dia": [
    [
     "A",
     "Praxis Dr. Weber, guten Morgen.",
-    "Кабинет доктора Вебера, доброе утро."
+    "k.a1-8.dia.0.2"
    ],
    [
     "B",
     "Guten Morgen, ich habe Fieber und Halsschmerzen. Kann ich heute kommen?",
-    "Доброе утро, у меня температура и болит горло. Могу я прийти сегодня?"
+    "k.a1-8.dia.1.2"
    ],
    [
     "A",
     "Ja, kommen Sie um elf Uhr. Bringen Sie Ihre Versichertenkarte mit.",
-    "Да, приходите в одиннадцать. Возьмите страховую карточку."
+    "k.a1-8.dia.2.2"
    ],
    [
     "B",
     "Vielen Dank. Ich brauche auch eine Krankmeldung für meinen Arbeitgeber.",
-    "Большое спасибо. Мне также нужен больничный для работодателя."
+    "k.a1-8.dia.3.2"
    ]
   ],
   "ue": [
@@ -1326,105 +1326,105 @@
   "id": "a1-9",
   "lv": "A1",
   "t": "Arbeit und Beruf",
-  "ru": "Работа и профессия",
+  "ru": "k.a1-9",
   "gr": {
    "t": "W-Fragen und Ja/Nein-Fragen, Perfekt-Einstieg",
-   "ru": "Вопросы с вопросительным словом и вопросы «да/нет», введение в Perfekt",
+   "ru": "k.a1-9.gr",
    "de": "W-Frage: Fragewort auf Position 1 (Was machen Sie beruflich?). Ja/Nein-Frage: Verb auf Position 1 (Arbeiten Sie hier?). Über Vergangenes spricht man meist im Perfekt: Ich habe in Kiew als Lehrerin gearbeitet.",
-   "rde": "Вопрос с вопросительным словом: оно на первом месте (Was machen Sie beruflich? — Кем Вы работаете?). Вопрос «да/нет»: глагол на первом месте (Arbeiten Sie hier? — Вы здесь работаете?). О прошлом чаще всего говорят в Perfekt: Ich habe in Kiew als Lehrerin gearbeitet (Я работала учительницей в Киеве).",
+   "rde": "k.a1-9.gr.rde",
    "ex": [
     [
      "Was sind Sie von Beruf? – Ich bin Krankenpfleger.",
-     "Кто Вы по профессии? — Я медбрат."
+     "k.a1-9.gr.ex.0.1"
     ],
     [
      "Ich arbeite Vollzeit bei einer Firma in Freital.",
-     "Я работаю полный день в фирме во Фрайтале."
+     "k.a1-9.gr.ex.1.1"
     ],
     [
      "Haben Sie einen Arbeitsvertrag?",
-     "У Вас есть трудовой договор?"
+     "k.a1-9.gr.ex.2.1"
     ],
     [
      "Ich habe in Russland Informatik studiert.",
-     "Я изучал информатику в России."
+     "k.a1-9.gr.ex.3.1"
     ]
    ]
   },
   "vok": [
    [
     "der Beruf",
-    "профессия"
+    "k.a1-9.vok.0.1"
    ],
    [
     "die Arbeit",
-    "работа"
+    "k.a1-9.vok.1.1"
    ],
    [
     "der Arbeitgeber",
-    "работодатель"
+    "k.a1-9.vok.2.1"
    ],
    [
     "der Kollege / die Kollegin",
-    "коллега"
+    "k.a1-9.vok.3.1"
    ],
    [
     "die Firma",
-    "фирма"
+    "k.a1-9.vok.4.1"
    ],
    [
     "Vollzeit / Teilzeit",
-    "полный / неполный рабочий день"
+    "k.a1-9.vok.5.1"
    ],
    [
     "das Gehalt",
-    "зарплата"
+    "k.a1-9.vok.6.1"
    ],
    [
     "der Arbeitsvertrag",
-    "трудовой договор"
+    "k.a1-9.vok.7.1"
    ],
    [
     "die Bewerbung",
-    "заявление о приёме на работу"
+    "k.a1-9.vok.8.1"
    ],
    [
     "arbeitslos",
-    "безработный"
+    "k.a1-9.vok.9.1"
    ],
    [
     "das Jobcenter",
-    "центр занятости"
+    "k.a1-9.vok.10.1"
    ],
    [
     "der Lebenslauf",
-    "резюме, автобиография"
+    "k.a1-9.vok.11.1"
    ],
    [
     "Urlaub",
-    "отпуск"
+    "k.a1-9.vok.12.1"
    ]
   ],
   "dia": [
    [
     "A",
     "Was machen Sie beruflich?",
-    "Чем Вы занимаетесь?"
+    "k.a1-9.dia.0.2"
    ],
    [
     "B",
     "Ich bin Elektriker. Ich arbeite seit zwei Jahren bei einer Firma in Pirna.",
-    "Я электрик. Два года работаю в фирме в Пирне."
+    "k.a1-9.dia.1.2"
    ],
    [
     "A",
     "Und was haben Sie früher gemacht?",
-    "А что Вы делали раньше?"
+    "k.a1-9.dia.2.2"
    ],
    [
     "B",
     "In Georgien habe ich auch als Elektriker gearbeitet.",
-    "В Грузии я тоже работал электриком."
+    "k.a1-9.dia.3.2"
    ]
   ],
   "ue": [
@@ -1481,113 +1481,113 @@
   "id": "a1-10",
   "lv": "A1",
   "t": "Formulare und Ämter",
-  "ru": "Анкеты и ведомства",
+  "ru": "k.a1-10",
   "gr": {
    "t": "Formularwörter verstehen, Datum",
-   "ru": "Понимание слов в анкетах, дата",
+   "ru": "k.a1-10.gr",
    "de": "Formulare fragen immer nach denselben Daten. Datum: am 3. Mai = am dritten Mai; geboren am 12.04.1990 = am zwölften vierten neunzehnhundertneunzig. Unterschrift = Name mit der Hand geschrieben.",
-   "rde": "Анкеты всегда спрашивают одни и те же данные. Дата: am 3. Mai = am dritten Mai (третьего мая); geboren am 12.04.1990 = am zwölften vierten neunzehnhundertneunzig. Unterschrift — подпись (имя, написанное от руки).",
+   "rde": "k.a1-10.gr.rde",
    "ex": [
     [
      "Füllen Sie bitte das Formular aus.",
-     "Пожалуйста, заполните анкету."
+     "k.a1-10.gr.ex.0.1"
     ],
     [
      "Ich bin am 5. Juni 1988 in Minsk geboren.",
-     "Я родился(-ась) 5 июня 1988 года в Минске."
+     "k.a1-10.gr.ex.1.1"
     ],
     [
      "Unterschreiben Sie bitte hier.",
-     "Пожалуйста, подпишите здесь."
+     "k.a1-10.gr.ex.2.1"
     ],
     [
      "Ich brauche eine Meldebescheinigung.",
-     "Мне нужна справка о регистрации."
+     "k.a1-10.gr.ex.3.1"
     ]
    ]
   },
   "vok": [
    [
     "das Formular",
-    "анкета, бланк"
+    "k.a1-10.vok.0.1"
    ],
    [
     "ausfüllen",
-    "заполнять"
+    "k.a1-10.vok.1.1"
    ],
    [
     "das Geburtsdatum",
-    "дата рождения"
+    "k.a1-10.vok.2.1"
    ],
    [
     "der Geburtsort",
-    "место рождения"
+    "k.a1-10.vok.3.1"
    ],
    [
     "die Staatsangehörigkeit",
-    "гражданство"
+    "k.a1-10.vok.4.1"
    ],
    [
     "der Familienstand",
-    "семейное положение"
+    "k.a1-10.vok.5.1"
    ],
    [
     "die Anschrift",
-    "адрес"
+    "k.a1-10.vok.6.1"
    ],
    [
     "die Unterschrift",
-    "подпись"
+    "k.a1-10.vok.7.1"
    ],
    [
     "unterschreiben",
-    "подписывать"
+    "k.a1-10.vok.8.1"
    ],
    [
     "das Amt / die Behörde",
-    "ведомство, учреждение"
+    "k.a1-10.vok.9.1"
    ],
    [
     "der Antrag",
-    "заявление"
+    "k.a1-10.vok.10.1"
    ],
    [
     "beantragen",
-    "подавать заявление"
+    "k.a1-10.vok.11.1"
    ],
    [
     "der Ausweis",
-    "удостоверение"
+    "k.a1-10.vok.12.1"
    ],
    [
     "sich anmelden",
-    "зарегистрироваться"
+    "k.a1-10.vok.13.1"
    ],
    [
     "die Wartenummer",
-    "номер очереди"
+    "k.a1-10.vok.14.1"
    ]
   ],
   "dia": [
    [
     "A",
     "Guten Tag, ich möchte mich anmelden. Ich bin umgezogen.",
-    "Добрый день, я хочу зарегистрироваться. Я переехал(а)."
+    "k.a1-10.dia.0.2"
    ],
    [
     "B",
     "Haben Sie Ihren Pass und die Wohnungsgeberbestätigung?",
-    "У Вас есть паспорт и подтверждение от арендодателя?"
+    "k.a1-10.dia.1.2"
    ],
    [
     "A",
     "Ja, hier bitte.",
-    "Да, вот, пожалуйста."
+    "k.a1-10.dia.2.2"
    ],
    [
     "B",
     "Danke. Füllen Sie bitte noch das Formular aus und unterschreiben Sie unten.",
-    "Спасибо. Заполните, пожалуйста, ещё анкету и подпишите внизу."
+    "k.a1-10.dia.3.2"
    ]
   ],
   "ue": [

@@ -1,14 +1,14 @@
 // Einbürgerung Sachsen – Lern-App (PWA). Vanilla JS, keine Abhängigkeiten.
-const VERSION = '1.5.0';
+const VERSION = '1.6.0';
 const $app = document.getElementById('app');
 const DAY = 86400000;
 
 /* ---------- Zustand (lokal im Browser) ---------- */
 const KEY = 'eb.v1';
 const LANG_CODES = ['', 'de', 'ru', 'en', 'tr', 'ar', 'pl', 'ro']; // '' = noch nicht gewählt
-const defaults = { ru: true, theme: 'auto', size: 'm', srs: {}, wrong: {}, exams: [], kurs: {}, vok: {}, docs: {}, persona: ['angestellt'], check: {}, amt: null, einreise: '', ehe: false, testdate: '', b1date: '', planTime: '19:00', cv: null, kosten: null, fristen: [{ id: 'pass', t: 'Reisepass', d: '' }, { id: 'titel', t: 'Aufenthaltstitel', d: '' }], installSeen: false, lang: '', onboarded: false };
+const defaults = { theme: 'auto', size: 'm', srs: {}, wrong: {}, exams: [], kurs: {}, vok: {}, docs: {}, persona: ['angestellt'], check: {}, amt: null, einreise: '', ehe: false, testdate: '', b1date: '', planTime: '19:00', cv: null, kosten: null, fristen: [{ id: 'pass', t: 'Reisepass', d: '' }, { id: 'titel', t: 'Aufenthaltstitel', d: '' }], installSeen: false, lang: '', onboarded: false };
 // Familienmodus: mehrere Profile; Unterlagen, Behörde, Kosten und Termin-Checklisten sind gemeinsam.
-const SHARED = ['docs', 'persona', 'amt', 'kosten', 'term', 'ru', 'theme', 'size', 'installSeen', 'lang', 'onboarded'];
+const SHARED = ['docs', 'persona', 'amt', 'kosten', 'term', 'theme', 'size', 'installSeen', 'lang', 'onboarded'];
 Object.assign(defaults, { daily: {}, stat: {}, milestones: {}, term: {}, drafts: {} });
 // Immer eine frische Kopie: sonst teilen sich Profile und „Zurücksetzen“ dieselben Objekte (srs, wrong, fristen …)
 const fresh = () => structuredClone(defaults);
@@ -132,11 +132,12 @@ function load() {
   const own = clean(readJSON(pKey(P.active), {}));
   let shared = readJSON('eb.shared', null);
   if (!shared) { shared = {}; const first = readJSON(KEY, {}); SHARED.forEach(k => { if (k in first) shared[k] = first[k]; }); writeJSON('eb.shared', shared, true); }
-  const legacy = kind(shared) === 'object' && !('lang' in shared) && ('ru' in shared);
+  // bis 1.3 gab es nur „Russisch an/aus“ (shared.ru) statt der Sprachwahl
+  const legacy = kind(shared) === 'object' && !('lang' in shared) && ('ru' in shared) ? (shared.ru === false ? 'de' : 'ru') : null;
   shared = clean(shared);
   const st = Object.assign(fresh(), own, shared);
   // Umstieg von „Russisch an/aus“ (bis 1.3) auf die Sprachwahl; wer die App schon benutzt hat, braucht keinen Erststart
-  if (legacy) { st.lang = shared.ru === false ? 'de' : 'ru'; st.onboarded = true; }
+  if (legacy) { st.lang = legacy; st.onboarded = true; }
   if (!LANG_CODES.includes(st.lang)) st.lang = '';
   return st;
 }
@@ -176,7 +177,7 @@ async function boot() {
   D.general = D.q.filter(q => q.id.startsWith('g'));
   D.state = D.q.filter(q => q.id.startsWith('SN'));
   D.vok = D.kurs.flatMap(l => l.vok.map(v => ({ id: l.id + ':' + v[0], de: v[0], ru: v[1], lv: l.lv, lesson: l.id })));
-  if (hl() && hl() !== 'ru' && !(await loadDict(hl()))) S.lang = 'ru'; // offline ohne Wörterbuch: Russisch statt leerer Texte
+  if (hl() && !(await loadDict(hl()))) setTimeout(() => toast(`${LANG[hl()].de} konnte nicht geladen werden – bitte mit Internet neu öffnen.`), 800);
   applyPrefs();
   window.addEventListener('hashchange', route);
   route();
@@ -220,23 +221,25 @@ const HL = ['ru', 'en', 'tr', 'ar', 'pl', 'ro']; // Hilfssprachen, Reihenfolge i
 const hl = () => HL.includes(S.lang) ? S.lang : (S.lang === 'de' ? null : 'ru');
 const hlName = () => hl() ? LANG[hl()].de : 'Deutsch'; // „Russisch“ / „Englisch“ …
 const dirAttr = l => LANG[l]?.rtl ? ' dir="rtl"' : '';
-const CYR = /[Ѐ-ӿ]/;
-// Wörterbücher: russischer Quelltext → Hilfssprache (data/<code>.json)
+// Wörterbücher data/i18n/<code>.json: feste ID → Text in der Hilfssprache (auch Russisch).
+// Die IDs stehen in den Daten (z. B. q.g1, info.steps.s1.dru) und im Code (ui.…).
 const DICT = {};
 async function loadDict(l) {
-  if (l === 'ru' || DICT[l]) return true;
-  try { const r = await fetch(`data/${l}.json`); if (!r.ok) throw 0; DICT[l] = await r.json(); return true; } catch { return false; }
+  if (DICT[l]) return true;
+  const url = `data/i18n/${l}.json`;
+  try { const r = await fetch(url); if (!r.ok) throw 0; DICT[l] = await r.json(); } catch { return false; }
+  // für die Offline-Nutzung im Service Worker ablegen (beim ersten Besuch läuft der noch nicht)
+  navigator.serviceWorker?.ready.then(reg => reg.active?.postMessage({ type: 'CACHE', url })).catch(() => {});
+  return true;
 }
-// russischen Quelltext in die gewählte Hilfssprache bringen
-function tr(t) {
-  if (!t) return '';
-  const l = hl(); if (!l || l === 'ru') return t;
-  const e = DICT[l]?.[t];
-  return e != null ? e : (CYR.test(t) ? '' : t);
+// ID → Text in der gewählten Hilfssprache ('' bei „Nur Deutsch“ oder wenn die Übersetzung fehlt)
+function tr(id) {
+  const l = hl(); if (!id || !l) return '';
+  return DICT[l]?.[id] ?? '';
 }
 async function setLang(l) {
   if (l !== 'de' && !(await loadDict(l))) { toast(`${LANG[l].de} konnte nicht geladen werden – bitte mit Internet erneut versuchen.`); return false; }
-  S.lang = l; S.ru = l !== 'de'; save(); applyPrefs(); readerBar();
+  S.lang = l; save(); applyPrefs(); readerBar();
   return true;
 }
 const SAY_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 010 6"/></svg>';
@@ -373,25 +376,25 @@ function stepDone(id) {
 }
 
 const MEHR = [
-  ['Lernen', 'Учёба', [['vokabeln', 'Vokabeltrainer', 'Тренажёр слов', 'Alle Wörter aus dem Kurs mit Sprachausgabe'],
-    ['dtz', 'B1-Prüfung (DTZ)', 'Экзамен B1 (DTZ)', 'Hören, Lesen, Schreiben und Sprechen üben'],
-    ['plan', 'Mein Lernplan', 'Мой план обучения', 'Tagesziele bis zum Prüfungstermin, mit Erinnerung'],
-    ['audio', 'Audio-Modus', 'Аудиорежим', 'Fragen vorlesen lassen – für unterwegs'],
-    ['glossar', 'Wörterbuch', 'Словарь', 'Schwierige Begriffe einfach erklärt'],
-    ['gespraech', 'Gespräch bei der Behörde üben', 'Подготовка к беседе в ведомстве', 'Typische Fragen, Musterantworten, das Bekenntnis erklärt']]],
-  ['Antrag & Unterlagen', 'Заявление и документы', [['check', 'Voraussetzungs-Check', 'Проверка условий', 'Erfülle ich die Bedingungen? Ab wann darf ich?'],
-    ['lebenslauf', 'Lebenslauf-Generator', 'Генератор автобиографии', 'Ausführlicher Lebenslauf als Text für den Antrag'],
-    ['kosten', 'Kostenrechner', 'Калькулятор расходов', 'Was die Einbürgerung für deine Familie kostet'],
-    ['fristen', 'Ablaufdaten', 'Сроки документов', 'Warnung, bevor Pass oder Aufenthaltstitel ablaufen'],
-    ['termine', 'Was mitbringen?', 'Что взять с собой?', 'Listen für Test, B1-Prüfung und Behördentermin'],
-    ['briefe', 'Briefvorlagen', 'Шаблоны писем', 'An die Behörde schreiben – zum Kopieren']]],
-  ['Nach der Einbürgerung', 'После натурализации', [['waehlen', 'Mein erstes Mal wählen', 'Мои первые выборы', 'Wahlen in Sachsen einfach erklärt – mit Quiz']]],
-  ['App', 'Приложение', [['sprache', 'Sprache ändern', 'Изменить язык', () => `Jetzt: ${hl() ? 'Deutsch + ' + LANG[hl()].de : 'Nur Deutsch'}`],
-    ['tutorial', 'Einführung ansehen', 'Посмотреть введение', 'Kurze Tour durch die App – jederzeit wiederholbar'],
-    ['profil', 'Familienmodus', 'Семейный режим', 'Mehrere Personen auf einem Gerät'],
-    ['installieren', 'Als App installieren', 'Установить как приложение', 'Anleitung für iPhone, iPad und Android'],
-    ['teilen', 'App weiterempfehlen', 'Порекомендовать приложение', 'Per WhatsApp, Telegram oder QR-Code'],
-    ['einstellungen', 'Einstellungen & Infos', 'Настройки и информация', 'Sprache, Schriftgröße, Sicherung, Quellen']]]
+  ['Lernen', 'ui.learning', [['vokabeln', 'Vokabeltrainer', 'ui.vocabulary-trainer', 'Alle Wörter aus dem Kurs mit Sprachausgabe'],
+    ['dtz', 'B1-Prüfung (DTZ)', 'ui.b1-exam-dtz', 'Hören, Lesen, Schreiben und Sprechen üben'],
+    ['plan', 'Mein Lernplan', 'ui.my-study-plan', 'Tagesziele bis zum Prüfungstermin, mit Erinnerung'],
+    ['audio', 'Audio-Modus', 'ui.audio-mode', 'Fragen vorlesen lassen – für unterwegs'],
+    ['glossar', 'Wörterbuch', 'ui.dictionary', 'Schwierige Begriffe einfach erklärt'],
+    ['gespraech', 'Gespräch bei der Behörde üben', 'ui.preparing-for-the-interview-at-the-a', 'Typische Fragen, Musterantworten, das Bekenntnis erklärt']]],
+  ['Antrag & Unterlagen', 'ui.application-and-documents', [['check', 'Voraussetzungs-Check', 'ui.requirements-check', 'Erfülle ich die Bedingungen? Ab wann darf ich?'],
+    ['lebenslauf', 'Lebenslauf-Generator', 'ui.cv-generator', 'Ausführlicher Lebenslauf als Text für den Antrag'],
+    ['kosten', 'Kostenrechner', 'ui.cost-calculator', 'Was die Einbürgerung für deine Familie kostet'],
+    ['fristen', 'Ablaufdaten', 'ui.document-expiry-dates', 'Warnung, bevor Pass oder Aufenthaltstitel ablaufen'],
+    ['termine', 'Was mitbringen?', 'ui.what-to-bring', 'Listen für Test, B1-Prüfung und Behördentermin'],
+    ['briefe', 'Briefvorlagen', 'ui.letter-templates', 'An die Behörde schreiben – zum Kopieren']]],
+  ['Nach der Einbürgerung', 'ui.after-naturalisation', [['waehlen', 'Mein erstes Mal wählen', 'ui.my-first-time-voting', 'Wahlen in Sachsen einfach erklärt – mit Quiz']]],
+  ['App', 'ui.app', [['sprache', 'Sprache ändern', 'ui.change-language', () => `Jetzt: ${hl() ? 'Deutsch + ' + LANG[hl()].de : 'Nur Deutsch'}`],
+    ['tutorial', 'Einführung ansehen', 'ui.watch-the-introduction', 'Kurze Tour durch die App – jederzeit wiederholbar'],
+    ['profil', 'Familienmodus', 'ui.family-mode', 'Mehrere Personen auf einem Gerät'],
+    ['installieren', 'Als App installieren', 'ui.install-as-an-app', 'Anleitung für iPhone, iPad und Android'],
+    ['teilen', 'App weiterempfehlen', 'ui.recommend-the-app', 'Per WhatsApp, Telegram oder QR-Code'],
+    ['einstellungen', 'Einstellungen & Infos', 'ui.settings-and-information', 'Sprache, Schriftgröße, Sicherung, Quellen']]]
 ];
 function mehr() {
   render(`<h1>Mehr</h1>${MEHR.map(([g, gr, items]) => `<h2 class="group-h">${g}${ru(gr)}</h2><div class="grid two">
@@ -409,15 +412,15 @@ function test() {
   const last = S.exams.slice(-5).reverse();
   render(`
     <h1>Einbürgerungstest</h1>
-    <p class="muted">33 Fragen in 60 Minuten: 30 aus 300 allgemeinen + 3 aus 10 Sachsen-Fragen. Bestanden ab 17 richtigen. Gebühr 25 € bei der Volkshochschule.${ru('33 вопроса за 60 минут: 30 из 300 общих + 3 из 10 вопросов по Саксонии. Сдан от 17 правильных ответов. Сбор 25 € в народном университете (VHS).')}</p>
+    <p class="muted">33 Fragen in 60 Minuten: 30 aus 300 allgemeinen + 3 aus 10 Sachsen-Fragen. Bestanden ab 17 richtigen. Gebühr 25 € bei der Volkshochschule.${ru('ui.33-questions-in-60-minutes-30-out-of')}</p>
     <div class="card"><div class="row"><div><div class="stat">${L} / 310</div><div class="muted small">sicher gelernt (Stufe 4+)</div></div><div class="spacer"></div><span class="badge brand">${due} fällig</span><span class="badge">${neu} neu</span></div><div style="margin-top:10px">${bar(pct(L, 310))}</div></div>
     <div class="grid two">
-      <a class="tile" href="#lernen"><h3>Lernen</h3>${ru('Учить')}<div class="meta">Bis zu 20 Fragen: erst fällige Wiederholungen, dann neue. Falsche kommen wieder.</div><span class="arrow">›</span></a>
-      <a class="tile" href="#pruefung"><h3>Prüfung simulieren</h3>${ru('Пробный экзамен')}<div class="meta">Wie im echten Test: 33 Fragen, 60 Minuten, Auswertung am Ende.</div><span class="arrow">›</span></a>
-      <a class="tile" href="#lernen--fehler"><h3>Meine Fehler</h3>${ru('Мои ошибки')}<div class="meta">${wrong} Fragen zuletzt falsch beantwortet.</div><span class="arrow">›</span></a>
-      <a class="tile" href="#audio"><h3>Audio-Modus</h3>${ru('Аудиорежим')}<div class="meta">Fragen und Antworten vorlesen lassen – für unterwegs.</div><span class="arrow">›</span></a>
-      <a class="tile" href="#glossar"><h3>Wörterbuch</h3>${ru('Словарь')}<div class="meta">${D.glossar.length} schwierige Begriffe${hl() ? ` mit ${LANG[hl()].adj}r Erklärung` : ', einfach erklärt'}.</div><span class="arrow">›</span></a>
-      <a class="tile" href="#katalog"><h3>Alle 310 Fragen</h3>${ru('Все 310 вопросов')}<div class="meta">Katalog mit Lösungen, Suche und Themenfilter.</div><span class="arrow">›</span></a>
+      <a class="tile" href="#lernen"><h3>Lernen</h3>${ru('ui.learn')}<div class="meta">Bis zu 20 Fragen: erst fällige Wiederholungen, dann neue. Falsche kommen wieder.</div><span class="arrow">›</span></a>
+      <a class="tile" href="#pruefung"><h3>Prüfung simulieren</h3>${ru('ui.practice-exam')}<div class="meta">Wie im echten Test: 33 Fragen, 60 Minuten, Auswertung am Ende.</div><span class="arrow">›</span></a>
+      <a class="tile" href="#lernen--fehler"><h3>Meine Fehler</h3>${ru('ui.my-mistakes')}<div class="meta">${wrong} Fragen zuletzt falsch beantwortet.</div><span class="arrow">›</span></a>
+      <a class="tile" href="#audio"><h3>Audio-Modus</h3>${ru('ui.audio-mode')}<div class="meta">Fragen und Antworten vorlesen lassen – für unterwegs.</div><span class="arrow">›</span></a>
+      <a class="tile" href="#glossar"><h3>Wörterbuch</h3>${ru('ui.dictionary')}<div class="meta">${D.glossar.length} schwierige Begriffe${hl() ? ` mit ${LANG[hl()].adj}r Erklärung` : ', einfach erklärt'}.</div><span class="arrow">›</span></a>
+      <a class="tile" href="#katalog"><h3>Alle 310 Fragen</h3>${ru('ui.all-310-questions')}<div class="meta">Katalog mit Lösungen, Suche und Themenfilter.</div><span class="arrow">›</span></a>
     </div>
     <div style="margin-top:14px">${statsCard()}</div>
     ${last.length ? `<h2 style="margin-top:20px">Letzte Simulationen</h2><div class="card"><ul class="list">${last.map(e => `<li class="row"><span>${fmtDate(e.date)}</span><span class="spacer"></span><b>${e.score}/${e.total}</b> <span class="badge ${e.score >= 17 ? 'ok' : 'bad'}">${e.score >= 17 ? 'bestanden' : 'nicht bestanden'}</span></li>`).join('')}</ul></div>` : ''}
@@ -463,7 +466,7 @@ function lernen(filter, arg) {
     render(`${back('#test', 'Test')}
       ${queue.length <= 40 ? `<div class="segs" aria-label="Fortschritt ${i + 1} von ${queue.length}">${queue.map((_, k) => `<i class="${k < i ? 'd' : ''}"></i>`).join('')}</div>` : `<div style="margin-bottom:12px">${bar(pct(i, queue.length))}</div>`}
       ${qCard(q, { sel, reveal: revealed, mode: 'learn' })}
-      <div aria-live="polite">${revealed ? `<div class="feedback ${sel === q.a ? 'ok' : 'bad'}">${sel === q.a ? '✓ Richtig!' : '✗ Leider falsch. Richtig ist ' + ABC[q.a] + '.'}${ruRaw(sel === q.a ? tr('Правильно!') : tr('К сожалению, неверно. Правильный ответ: ') + ABC[q.a] + '.')}</div>` : ''}</div>
+      <div aria-live="polite">${revealed ? `<div class="feedback ${sel === q.a ? 'ok' : 'bad'}">${sel === q.a ? '✓ Richtig!' : '✗ Leider falsch. Richtig ist ' + ABC[q.a] + '.'}${ruRaw(sel === q.a ? tr('ui.correct') : tr('ui.unfortunately-wrong-the-correct-answ') + ABC[q.a] + '.')}</div>` : ''}</div>
       ${revealed ? `<div class="row end sticky-next"><button class="btn primary" data-act="next">${i + 1 < queue.length ? 'Weiter ›' : 'Runde beenden'}</button></div>` : '<p class="kbd-hint">Tastatur: 1–4 oder A–D wählen, Enter für Weiter</p>'}`);
     if (revealed) $app.querySelector('[data-act="next"]')?.focus({ preventScroll: true });
   }
@@ -485,7 +488,7 @@ function lernen(filter, arg) {
     } else if (t.dataset.act === 'next') {
       i++;
       if (i >= queue.length) {
-        render(`${back('#test', 'Test')}<div class="card"><h2>Runde geschafft!</h2>${ru('Раунд пройден!')}<p class="stat">${right} / ${answered}</p><p class="muted">beim ersten Versuch richtig</p>
+        render(`${back('#test', 'Test')}<div class="card"><h2>Runde geschafft!</h2>${ru('ui.round-complete')}<p class="stat">${right} / ${answered}</p><p class="muted">beim ersten Versuch richtig</p>
           <div class="row"><a class="btn primary" href="#test" data-act="again">Noch eine Runde</a><a class="btn" href="#test">Übersicht</a></div></div>`);
         $app.onclick = e2 => { if (e2.target.closest('[data-act="again"]')) { e2.preventDefault(); lernen(filter, arg); } };
       } else show();
@@ -548,7 +551,7 @@ function pruefung() {
     if (done) { if (a === 'again') pruefung(); if (a === 'bild') erfolgsbild(qs.filter((q, k) => ans[k] === q.a).length); return; }
     if (a === 'quit') {
       if (!ans.some(x => x !== null)) { location.hash = '#test'; return; }
-      document.getElementById('quitbox').innerHTML = `<div class="notice" role="alert" style="margin:10px 0 0"><b>Simulation abbrechen?</b> Deine Antworten werden nicht gewertet.${ru('Прервать пробный экзамен? Ответы не будут засчитаны.')}<div class="row" style="margin-top:8px"><a class="btn small" href="#test">Ja, abbrechen</a><button class="btn small primary" data-act="stay">Weiter üben</button></div></div>`;
+      document.getElementById('quitbox').innerHTML = `<div class="notice" role="alert" style="margin:10px 0 0"><b>Simulation abbrechen?</b> Deine Antworten werden nicht gewertet.${ru('ui.cancel-the-practice-exam-your-answer')}<div class="row" style="margin-top:8px"><a class="btn small" href="#test">Ja, abbrechen</a><button class="btn small primary" data-act="stay">Weiter üben</button></div></div>`;
       return;
     }
     if (a === 'stay') { document.getElementById('quitbox').innerHTML = ''; return; }
@@ -598,7 +601,7 @@ function kurs() {
   const vokDue = D.vok.filter(v => S.vok[v.id] && S.vok[v.id].due <= Date.now()).length;
   const next = D.kurs.find(l => !S.kurs[l.id]?.done);
   render(`<h1>Deutschkurs A1 – B1</h1>
-    <p class="muted">30 Lektionen mit Grammatik, Wortschatz (mit Sprachausgabe), Dialogen und Übungen – ${hl() ? `alle Erklärungen auch auf ${hlName()}` : 'mit einfachen Erklärungen'}. Ziel: das B1-Zertifikat für die Einbürgerung.${ru('30 уроков с грамматикой, словами (с озвучкой), диалогами и упражнениями — все объяснения также на русском. Цель: сертификат B1 для натурализации.')}</p>
+    <p class="muted">30 Lektionen mit Grammatik, Wortschatz (mit Sprachausgabe), Dialogen und Übungen – ${hl() ? `alle Erklärungen auch auf ${hlName()}` : 'mit einfachen Erklärungen'}. Ziel: das B1-Zertifikat für die Einbürgerung.${ru('ui.30-lessons-with-grammar-vocabulary-w')}</p>
     <div class="grid two" style="margin-bottom:8px">
       <a class="tile" href="#vokabeln"><h3>Vokabeltrainer</h3><div class="meta">${D.vok.length} Wörter · ${vokDue} heute fällig</div><span class="arrow">›</span></a>
       <a class="tile" href="#dtz"><h3>B1-Prüfung (DTZ) üben</h3><div class="meta">Hören, Lesen, Schreiben, Sprechen</div><span class="arrow">›</span></a>
@@ -651,7 +654,7 @@ function uebungen(l, nxt) {
     if (u.k === 'gap') inner = `<form data-ue="gap" autocomplete="off"><input class="text" name="a" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Antwort eingeben" aria-label="Antwort"><div class="row end" style="margin-top:10px"><button class="btn primary">Prüfen</button></div></form>`;
     if (u.k === 'order') { u._bank = shuffle(u.w.map((w, k) => ({ w, k }))); u._line = []; inner = `<div class="word-line" id="line" aria-label="Dein Satz"></div><div class="word-bank" id="bank"></div><div class="row end"><button class="btn" data-ue="reset">Zurücksetzen</button><button class="btn primary" data-ue="order">Prüfen</button></div>`; }
     box.innerHTML = `<div class="row" style="margin-bottom:10px"><div style="flex:1">${bar(pct(i, items.length))}</div><span class="small muted">${i + 1}/${items.length}</span></div>
-      <div class="card"><div class="muted small" style="margin-bottom:6px">${u.k === 'mc' ? 'Wähle die richtige Antwort.' : u.k === 'gap' ? 'Ergänze die Lücke.' : 'Bilde einen Satz (Wörter antippen).'}${ru(u.k === 'mc' ? 'Выберите правильный ответ.' : u.k === 'gap' ? 'Заполните пропуск.' : 'Составьте предложение (нажимайте на слова).')}</div>
+      <div class="card"><div class="muted small" style="margin-bottom:6px">${u.k === 'mc' ? 'Wähle die richtige Antwort.' : u.k === 'gap' ? 'Ergänze die Lücke.' : 'Bilde einen Satz (Wörter antippen).'}${ru(u.k === 'mc' ? 'ui.choose-the-correct-answer' : u.k === 'gap' ? 'ui.fill-in-the-gap' : 'ui.build-a-sentence-tap-the-words')}</div>
       <div class="q-text">${esc(u.q || '')}</div>${inner}<div id="fb"></div></div>`;
     if (u.k === 'order') drawOrder(u);
     if (u.k === 'gap') box.querySelector('input').focus();
@@ -764,8 +767,8 @@ function dtz(part, id) {
   const done = S.dtzDone || {};
   const tiles = (arr, part, meta) => arr.map(x => `<a class="tile" href="#dtz--${part}--${x.id}"><h3>${esc(x.t)}</h3>${ru(x.ru)}<div class="meta">${done[x.id] != null ? `<span class="badge ${done[x.id] === x.q.length ? 'ok' : 'warn'}">${done[x.id]}/${x.q.length} richtig</span>` : meta}</div><span class="arrow">›</span></a>`).join('');
   render(`${back('#kurs', 'Kurs')}<h1>B1-Prüfung (DTZ)</h1><p>${esc(D.dtz.info.de)}</p>${ru(D.dtz.info.ru)}
-    <h2 style="margin-top:20px">Hören</h2>${ru('Аудирование')}<div class="grid two" style="margin-top:8px">${tiles(D.dtz.hoeren, 'hoeren', 'Anhören und Fragen beantworten')}</div>
-    <h2 style="margin-top:20px">Lesen</h2>${ru('Чтение')}<div class="grid two" style="margin-top:8px">${tiles(D.dtz.lesen, 'lesen', 'Text lesen und Fragen beantworten')}</div>
+    <h2 style="margin-top:20px">Hören</h2>${ru('ui.listening')}<div class="grid two" style="margin-top:8px">${tiles(D.dtz.hoeren, 'hoeren', 'Anhören und Fragen beantworten')}</div>
+    <h2 style="margin-top:20px">Lesen</h2>${ru('ui.reading')}<div class="grid two" style="margin-top:8px">${tiles(D.dtz.lesen, 'lesen', 'Text lesen und Fragen beantworten')}</div>
     <h2 style="margin-top:20px">Schreiben</h2><div class="grid two">${D.dtz.schreiben.map(w => `<a class="tile" href="#dtz--schreiben--${w.id}"><h3>${esc(w.t)}</h3>${ru(w.ru)}<div class="meta">4 Leitpunkte · mit Musterlösung</div><span class="arrow">›</span></a>`).join('')}</div>
     <h2 style="margin-top:20px">Sprechen</h2>
     ${D.dtz.sprechen.map(s => `<div class="card"><h3>${esc(s.t)}</h3>${ru(s.ru)}<ul class="list" style="margin-top:8px">${s.fragen.map(f => `<li class="vok"><span>${esc(f)}</span>${speakBtn(f)}</li>`).join('')}</ul></div>`).join('')}
@@ -812,9 +815,9 @@ function docs() {
   const all = groups.flatMap(g => g.items), done = all.filter(i => S.docs[i.id]).length;
   const myAmt = S.amt && D.amt.behoerden.find(b => b.id === S.amt);
   render(`<h1>Unterlagen-Checkliste</h1>
-    <p class="muted">Welche Unterlagen genau nötig sind, legt deine Behörde fest. Diese Liste zeigt, was typischerweise verlangt wird.${ru('Точный список документов определяет ваше ведомство. Здесь — то, что требуют обычно.')}</p>
+    <p class="muted">Welche Unterlagen genau nötig sind, legt deine Behörde fest. Diese Liste zeigt, was typischerweise verlangt wird.${ru('ui.your-authority-decides-exactly-which')}</p>
     ${myAmt?.downloads ? `<div class="notice ok"><b>${esc(myAmt.name)}:</b> ${myAmt.downloads.map(d => `<a href="${d.url}" target="_blank" rel="noopener">${esc(d.t)}</a>`).join(', ')}${myAmt.hinweis ? `<div class="small" style="margin-top:6px">${esc(myAmt.hinweis)}</div>` : ''}</div>` : `<div class="notice">Wähle unter <a href="#amt">Behörden</a> deinen Wohnort – dann siehst du hier die Hinweise deiner Behörde.</div>`}
-    <div class="card no-print"><b>Meine Situation</b>${ru('Моя ситуация')}<div class="chips" style="margin:10px 0 0">${PERSONAS.map(([k, n]) => `<button class="chip ${S.persona.includes(k) ? 'on' : ''}" data-p="${k}">${n}</button>`).join('')}</div></div>
+    <div class="card no-print"><b>Meine Situation</b>${ru('ui.my-situation')}<div class="chips" style="margin:10px 0 0">${PERSONAS.map(([k, n]) => `<button class="chip ${S.persona.includes(k) ? 'on' : ''}" data-p="${k}">${n}</button>`).join('')}</div></div>
     <div class="card"><div class="row"><b>${done} von ${all.length} erledigt</b><span class="spacer"></span>${EMBED ? '' : '<button class="btn small no-print" data-act="print">Drucken / PDF</button>'}</div><div style="margin-top:8px">${bar(pct(done, all.length))}</div></div>
     ${groups.map(g => `<div class="card"><h2>${esc(g.g)}</h2>${ru(g.gru)}<ul class="list">${g.items.map(it => `<li><label class="check ${S.docs[it.id] ? 'done' : ''}"><input type="checkbox" data-doc="${it.id}" ${S.docs[it.id] ? 'checked' : ''}><div><span class="t">${esc(it.t)}</span>${ru(it.ru)}${it.tip ? `<div class="tip">${esc(it.tip)}${ru(it.tru)}</div>` : ''}</div></label></li>`).join('')}</ul></div>`).join('')}
     <p class="small muted">Tipp: Kopien ins Antragsformular nur, wenn die Behörde es verlangt. Fremdsprachige Urkunden immer mit Übersetzung von beeidigten Übersetzer:innen.</p>`);
@@ -858,7 +861,7 @@ function amt() {
   const mine = S.amt && D.amt.behoerden.find(b => b.id === S.amt);
   render(`<h1>Behörden & Kontakte</h1>
     <div class="notice">Diese App ist eine private Lernhilfe und keine Behörde. Anträge stellst du direkt bei der zuständigen Stelle.</div>
-    <p class="muted">${esc(D.amt.regel)}${ru('В Хемнице, Дрездене и Лейпциге отвечает городская администрация, во всех остальных местах — районная администрация (Landratsamt).')}</p>
+    <p class="muted">${esc(D.amt.regel)}${ru('ui.in-chemnitz-dresden-and-leipzig-the')}</p>
     <label class="lbl" for="ort">Wohnort oder Postleitzahl</label>
     <input class="text" id="ort" type="search" placeholder="z. B. Freital, Pirna oder 01705" autocomplete="address-level2">
     <div class="chips" style="margin:10px 0 0">${['Freital', 'Pirna', 'Dresden', 'Leipzig', 'Chemnitz'].map(o => `<button class="chip" data-ort="${o}">${o}</button>`).join('')}</div>
@@ -892,11 +895,11 @@ function check() {
   let frist = '';
   if (S.einreise) { const d = new Date(S.einreise); d.setFullYear(d.getFullYear() + (S.ehe ? 3 : 5)); frist = d <= new Date() ? `<div class="notice ok">Die Mindestaufenthaltsdauer ist erfüllt (seit ${fmtDate(d)}).</div>` : `<div class="notice">Antrag frühestens ab <b>${fmtDate(d)}</b>. Den Test und Deutsch kannst du schon vorher machen!</div>`; }
   render(`<h1>Voraussetzungs-Check</h1>
-    <p class="muted">Unverbindliche Selbsteinschätzung nach § 10 StAG (Stand ${esc(D.info.stand)}). Die Entscheidung trifft die Einbürgerungsbehörde.${ru('Необязательная самооценка по § 10 Закона о гражданстве. Решение принимает ведомство по натурализации.')}</p>
-    <div class="card"><h2>Ab wann darf ich?</h2>${ru('С какого момента я могу подать?')}
+    <p class="muted">Unverbindliche Selbsteinschätzung nach § 10 StAG (Stand ${esc(D.info.stand)}). Die Entscheidung trifft die Einbürgerungsbehörde.${ru('ui.non-binding-self-assessment-under-10')}</p>
+    <div class="card"><h2>Ab wann darf ich?</h2>${ru('ui.from-when-can-i-apply')}
       <label class="lbl" for="ein" style="margin-top:10px">Beginn des rechtmäßigen Aufenthalts in Deutschland</label>
       <input class="text" type="date" id="ein" value="${esc(S.einreise)}" max="${new Date().toISOString().slice(0, 10)}">
-      <label class="check" style="margin-top:12px"><input type="checkbox" id="ehe" ${S.ehe ? 'checked' : ''}><div>Ich bin mit einer/einem Deutschen verheiratet (Ehe besteht seit mind. 2 Jahren)${ru('Я в браке с гражданином(-кой) Германии (не менее 2 лет)')}</div></label>
+      <label class="check" style="margin-top:12px"><input type="checkbox" id="ehe" ${S.ehe ? 'checked' : ''}><div>Ich bin mit einer/einem Deutschen verheiratet (Ehe besteht seit mind. 2 Jahren)${ru('ui.i-am-married-to-a-german-citizen-for')}</div></label>
       <div style="margin-top:12px">${frist}</div>
       <p class="small muted">Zeiten mit Duldung oder Aufenthaltsgestattung zählen meist nicht oder nur teilweise. Unterbrechungen durch Auslandsaufenthalte mit der Behörde klären.</p></div>
     ${overall ? `<div class="card"><h2><span class="ampel ${overall}"></span>${overall === 'g' ? 'Gute Chancen' : overall === 'y' ? 'Fast – es fehlen noch Schritte' : 'Derzeit nicht erfüllt'}</h2><p class="small">${overall === 'g' ? 'Nach deinen Angaben erfüllst du die Voraussetzungen. Nimm Kontakt zu deiner Behörde auf.' : overall === 'y' ? 'Einige Punkte musst du noch erledigen oder klären. Die Hinweise unten zeigen, was zu tun ist.' : 'Mindestens eine Voraussetzung fehlt. Lass dich beraten – oft gibt es einen Weg.'}</p>${overall !== 'r' ? '<a class="btn small" href="#amt">Zu meiner Behörde</a>' : '<a class="btn small" href="#amt">Beratungsstellen</a>'}</div>` : ''}
@@ -910,7 +913,7 @@ function check() {
 
 /* ---------- Briefvorlagen ---------- */
 function briefe() {
-  render(`<h1>Briefvorlagen</h1><p class="muted">Für E-Mails und Briefe an die Behörde. Ersetze die Angaben in [eckigen Klammern].${ru('Для писем и e-mail в ведомство. Замените данные в [квадратных скобках].')}</p>
+  render(`<h1>Briefvorlagen</h1><p class="muted">Für E-Mails und Briefe an die Behörde. Ersetze die Angaben in [eckigen Klammern].${ru('ui.for-emails-and-letters-to-the-author')}</p>
     ${D.info.briefe.map(b => `<div class="card"><h2>${esc(b.t)}</h2>${ru(b.ru)}<pre class="letter" style="margin-top:10px">${esc(b.text)}</pre><div class="row"><button class="btn small" data-copy="${b.id}">Kopieren</button>${S.amt && D.amt.behoerden.find(x => x.id === S.amt)?.mail ? `<a class="btn small" href="mailto:${esc(D.amt.behoerden.find(x => x.id === S.amt).mail)}?subject=${encodeURIComponent(b.t)}&body=${encodeURIComponent(b.text)}">Als E-Mail an meine Behörde</a>` : ''}</div></div>`).join('')}`);
   $app.onclick = async e => {
     const t = e.target.closest('[data-copy]'); if (!t) return;
@@ -923,7 +926,7 @@ function briefe() {
 /* ---------- Einstellungen ---------- */
 
 /* ---------- Startseite (Design „Urkunde“) ---------- */
-function greet() { const h = new Date().getHours(); return h < 11 ? ['Guten Morgen', 'Доброе утро'] : h < 18 ? ['Guten Tag', 'Добрый день'] : ['Guten Abend', 'Добрый вечер']; }
+function greet() { const h = new Date().getHours(); return h < 11 ? ['Guten Morgen', 'ui.good-morning'] : h < 18 ? ['Guten Tag', 'ui.good-afternoon'] : ['Guten Abend', 'ui.good-evening']; }
 function stamps() {
   const lv = l => { const ls = D.kurs.filter(x => x.lv === l), d = ls.filter(x => S.kurs[x.id]?.done).length; return d === ls.length ? 'on' : d ? 'part' : ''; };
   const qL = learned(S.srs, D.q.map(q => q.id));
@@ -955,7 +958,7 @@ function start() {
     <div class="hero">
       <div class="row"><span class="eyebrow">Deine Lernhilfe · Einbürgerung in Sachsen</span><span class="spacer"></span>${st ? `<span class="streak" title="Lerntage am Stück">🔥 ${st} ${st === 1 ? 'Tag' : 'Tage'}</span>` : ''}</div>
       <h1>${g}${name ? ', ' + esc(name) : ''}.</h1>${ruRaw(tr(gru) + (name ? ', ' + name : '') + '.')}
-      <p class="small muted" style="margin:8px 0 0">Private, kostenlose Lernhilfe – kein Angebot einer Behörde.${ru('Частная бесплатная помощь в обучении — не сервис ведомства.')}</p>
+      <p class="small muted" style="margin:8px 0 0">Private, kostenlose Lernhilfe – kein Angebot einer Behörde.${ru('ui.a-private-free-learning-aid-not-a-se')}</p>
       <div class="row" style="margin-top:10px;gap:8px"><a class="who" href="#profil">👤 ${P.list.length > 1 ? `${esc(name || 'Profil')} wechseln` : 'Familienmodus'}</a><a class="who" href="#sprache">🌐 ${hl() ? 'DE + ' + LANG[hl()].tag : 'Nur DE'}</a></div>
     </div>
     <div class="doc">
@@ -1008,7 +1011,7 @@ function statsCard() {
   const ts = topicStats().filter(x => x.r + x.w >= 5);
   if (!ts.length) return `<div class="card flat"><h3 style="margin:0 0 4px">Deine Themen-Statistik</h3><p class="small muted" style="margin:0">Erscheint, sobald du ein paar Fragen beantwortet hast.</p></div>`;
   const worst = ts.sort((a, b) => b.rate - a.rate).slice(0, 4);
-  return `<div class="card"><h3>Hier passieren die meisten Fehler</h3>${ru('Здесь больше всего ошибок')}
+  return `<div class="card"><h3>Hier passieren die meisten Fehler</h3>${ru('ui.this-is-where-most-mistakes-happen')}
     <div style="margin-top:12px">${worst.map(x => `<div class="barrow"><span>${esc(x.t)} <span class="small muted">· ${x.w} von ${x.r + x.w} falsch</span></span><a class="btn small" href="#lernen--thema--${x.k}">Üben</a>${bar(Math.round(x.rate * 100))}</div>`).join('')}</div></div>`;
 }
 
@@ -1052,9 +1055,9 @@ function audio() {
   function stop() { token++; playing = false; speechSynthesis.cancel(); wake?.release?.().catch(() => {}); }
   function draw() {
     const q = pool[i];
-    render(`${back('#test', 'Test')}<h1>Audio-Modus</h1><p class="muted">Fragen, Antworten und Erklärungen werden nacheinander vorgelesen – zum Lernen unterwegs. Nach den Antworten bleiben 3 Sekunden zum Nachdenken.${ru('Вопросы, ответы и объяснения зачитываются по очереди — для учёбы в дороге.')}</p>
+    render(`${back('#test', 'Test')}<h1>Audio-Modus</h1><p class="muted">Fragen, Antworten und Erklärungen werden nacheinander vorgelesen – zum Lernen unterwegs. Nach den Antworten bleiben 3 Sekunden zum Nachdenken.${ru('ui.questions-answers-and-explanations-a')}</p>
       <div class="chips">${modes.map(([k, n]) => `<button class="chip ${mode === k ? 'on' : ''}" data-mode="${k}">${n}</button>`).join('')}</div>
-      ${hl() ? `<label class="check" style="margin-bottom:14px"><input type="checkbox" id="ruex" ${ruEx ? 'checked' : ''}><div>Erklärung zusätzlich auf ${hlName()} vorlesen${ru('Дополнительно зачитывать объяснение на русском')}</div></label>` : ''}
+      ${hl() ? `<label class="check" style="margin-bottom:14px"><input type="checkbox" id="ruex" ${ruEx ? 'checked' : ''}><div>Erklärung zusätzlich auf ${hlName()} vorlesen${ru('ui.also-read-the-explanation-aloud-in-e')}</div></label>` : ''}
       ${q ? `<div class="card"><div class="q-head"><span>Frage ${q.n} · ${esc(q.t)}</span><span>${i + 1} / ${pool.length}</span></div><div class="q-text">${esc(q.q)}</div>
         <ol class="small" style="margin:0;padding-left:1.2em">${q.o.map((o, k) => `<li style="${playing ? '' : ''}">${esc(o)}</li>`).join('')}</ol></div>` : ''}
       <div class="player"><button class="btn round" data-act="prev" aria-label="Vorherige Frage">‹</button><button class="btn primary round" data-act="toggle" aria-label="${playing ? 'Pause' : 'Abspielen'}">${playing ? '❚❚' : '▶'}</button><button class="btn round" data-act="next" aria-label="Nächste Frage">›</button></div>
@@ -1076,7 +1079,7 @@ function audio() {
 
 /* ---------- Termin-Checklisten ---------- */
 function termine() {
-  render(`<h1>Was muss ich mitbringen?</h1><p class="muted">Abhakbare Listen für deine Termine. Verbindlich ist immer, was in deiner Einladung steht.${ru('Списки для ваших встреч. Обязательно то, что указано в приглашении.')}</p>
+  render(`<h1>Was muss ich mitbringen?</h1><p class="muted">Abhakbare Listen für deine Termine. Verbindlich ist immer, was in deiner Einladung steht.${ru('ui.checklists-for-your-appointments-wha')}</p>
     ${D.info.termine.map(T => { const done = T.items.filter((_, k) => S.term[`${T.id}:${k}`]).length;
       return `<details class="level" ${done && done < T.items.length ? 'open' : ''}><summary><span class="lv">${esc(T.t)}</span><span class="badge ${done === T.items.length ? 'ok' : ''}">${done}/${T.items.length}</span><span class="spacer"></span><span class="chev">›</span></summary>${ru(T.ru)}
       <ul class="list" style="margin-top:8px">${T.items.map(([t, r], k) => { const id = `${T.id}:${k}`; return `<li><label class="check ${S.term[id] ? 'done' : ''}"><input type="checkbox" data-term="${id}" ${S.term[id] ? 'checked' : ''}><div><span class="t">${esc(t)}</span>${ru(r)}</div></label></li>`; }).join('')}</ul>
@@ -1108,7 +1111,7 @@ document.addEventListener('click', e => {
 document.addEventListener('keydown', e => { const t = e.target.closest?.('.term'); if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.stopPropagation(); showPop(+t.dataset.g); } if (e.key === 'Escape') closePop(); }, true);
 function glossar() {
   let term = '';
-  render(`${back('#test', 'Test')}<h1>Wörterbuch</h1><p class="muted">Schwierige Begriffe aus dem Einbürgerungstest. In den Testfragen sind sie gepunktet unterstrichen – einfach antippen.${ru('Сложные термины из теста. В вопросах они подчёркнуты пунктиром — просто нажмите.')}</p>
+  render(`${back('#test', 'Test')}<h1>Wörterbuch</h1><p class="muted">Schwierige Begriffe aus dem Einbürgerungstest. In den Testfragen sind sie gepunktet unterstrichen – einfach antippen.${ru('ui.difficult-terms-from-the-test-in-the')}</p>
     <input class="text" type="search" id="gs" placeholder="Begriff suchen …" aria-label="Begriff suchen" style="margin-bottom:12px"><div id="gl"></div>`);
   const draw = () => {
     const t = term.toLowerCase();
@@ -1122,7 +1125,7 @@ function glossar() {
 
 /* ---------- Familienmodus ---------- */
 function profil() {
-  render(`<h1>Familienmodus</h1><p class="muted">Mehrere Personen können auf einem Gerät lernen – jede mit eigenem Lernstand. Unterlagen-Checkliste, Behörde, Kosten und Mitbring-Listen sind gemeinsam.${ru('Несколько человек могут учиться на одном устройстве — у каждого свой прогресс. Документы, ведомство, расходы и списки общие.')}</p>
+  render(`<h1>Familienmodus</h1><p class="muted">Mehrere Personen können auf einem Gerät lernen – jede mit eigenem Lernstand. Unterlagen-Checkliste, Behörde, Kosten und Mitbring-Listen sind gemeinsam.${ru('ui.several-people-can-learn-on-one-devi')}</p>
     <div class="card"><ul class="list">${P.list.map(p => `<li><div class="row"><input class="text" data-pname="${esc(p.id)}" value="${esc(p.name)}" placeholder="Name (z. B. Olga)" aria-label="Name" style="flex:1;min-width:0">
       ${p.id === P.active ? '<span class="badge ok">aktiv</span>' : `<button class="btn small primary" data-use="${esc(p.id)}">Wechseln</button>`}
       ${P.list.length > 1 && p.id !== 'p1' ? `<button class="btn small ghost" data-del="${esc(p.id)}">Löschen</button>` : ''}</div></li>`).join('')}</ul>
@@ -1157,12 +1160,12 @@ async function storageStatus() {
 }
 function einstellungen() {
   render(`<h1>Einstellungen</h1>
-    <div class="card"><h2>Sprache</h2>${ru('Язык')}<p class="small" style="margin-top:8px">Deutsch steht immer an erster Stelle. Dazu kannst du eine Hilfssprache wählen – jederzeit änderbar.</p>${langChoice()}
+    <div class="card"><h2>Sprache</h2>${ru('ui.language')}<p class="small" style="margin-top:8px">Deutsch steht immer an erster Stelle. Dazu kannst du eine Hilfssprache wählen – jederzeit änderbar.</p>${langChoice()}
       <div class="row" style="margin-top:4px"><a class="btn small" href="#tutorial">Einführung wiederholen</a></div></div>
     <div class="card"><label class="lbl">Schriftgröße</label><div class="chips">${[['m', 'Normal'], ['l', 'Groß'], ['xl', 'Sehr groß']].map(([k, n]) => `<button class="chip ${S.size === k ? 'on' : ''}" data-size="${k}">${n}</button>`).join('')}</div>
       <label class="lbl">Darstellung</label><div class="chips" style="margin:0">${[['auto', 'Automatisch'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([k, n]) => `<button class="chip ${S.theme === k ? 'on' : ''}" data-theme="${k}">${n}</button>`).join('')}</div></div>
     <div class="card"><h2>Speichern & Sichern</h2>
-      <p class="small">Alles wird automatisch gespeichert – sofort nach jeder Eingabe, doppelt auf diesem Gerät.${ru('Всё сохраняется автоматически сразу после каждого действия, дважды на этом устройстве.')}</p>
+      <p class="small">Alles wird automatisch gespeichert – sofort nach jeder Eingabe, doppelt auf diesem Gerät.${ru('ui.everything-is-saved-automatically-st')}</p>
       <p class="small" id="persist">…</p>
       <p class="small">${S.lastExport ? `Letzte Sicherungsdatei: ${fmtDate(S.lastExport)}` : 'Noch keine Sicherungsdatei heruntergeladen.'}</p>
       <div class="row">${EMBED ? '' : '<button class="btn small primary" data-act="export">Sicherungsdatei herunterladen</button>'}<label class="btn small">Sicherungsdatei laden<input type="file" accept="application/json,.json" id="imp" hidden></label></div><div id="impbox" style="margin-top:10px"></div>
@@ -1186,7 +1189,7 @@ function einstellungen() {
         pendingImport = JSON.parse(t);
         const when = b.v === 2 && JSON.parse(t).created ? fmtDate(Date.parse(JSON.parse(t).created)) : '';
         const who = b.v === 2 ? `${b.profiles.list.length} Profil${b.profiles.list.length > 1 ? 'e' : ''}` : '1 Profil';
-        document.getElementById('impbox').innerHTML = `<div class="notice" role="alert"><b>Aktuellen Stand ersetzen?</b><div class="small" style="margin-top:4px">Sicherung${when ? ' vom ' + when : ''} · ${who}. Dein jetziger Stand wird vorher als Sicherungspunkt abgelegt.</div>${ru('Заменить текущий прогресс? Текущее состояние будет сохранено как точка восстановления.')}
+        document.getElementById('impbox').innerHTML = `<div class="notice" role="alert"><b>Aktuellen Stand ersetzen?</b><div class="small" style="margin-top:4px">Sicherung${when ? ' vom ' + when : ''} · ${who}. Dein jetziger Stand wird vorher als Sicherungspunkt abgelegt.</div>${ru('ui.replace-your-current-progress-your-c')}
           <div class="row" style="margin-top:10px"><button class="btn small primary" data-act="imp-ok">Ersetzen</button><button class="btn small ghost" data-act="imp-no">Abbrechen</button></div></div>`;
         document.getElementById('impbox').scrollIntoView({ block: 'nearest' });
       }).catch(() => toast('Datei ungültig – bitte eine Sicherungsdatei dieser App wählen.'));
@@ -1202,14 +1205,14 @@ function einstellungen() {
     else if (t.dataset.act === 'imp-ok' && pendingImport) {
       await idbPut('snap:vor-wiederherstellung', fullBackup());
       try { restoreBackup(pendingImport); } catch { return toast('Datei ungültig – bitte eine Sicherungsdatei dieser App wählen.'); }
-      pendingImport = null; if (hl() && hl() !== 'ru') await loadDict(hl()); applyPrefs(); readerBar(); toast('Sicherung geladen'); einstellungen();
+      pendingImport = null; if (hl()) await loadDict(hl()); applyPrefs(); readerBar(); toast('Sicherung geladen'); einstellungen();
     }
     else if (t.dataset.snap) {
       if (!t.dataset.sure) { t.dataset.sure = '1'; t.textContent = 'Sicher? Nochmal tippen'; return; }
       await idbPut('snap:vor-wiederherstellung', fullBackup());
       const b = await idbGet(t.dataset.snap); if (!b) return toast('Sicherungspunkt nicht lesbar');
       try { restoreBackup(b); } catch { return toast('Sicherungspunkt nicht lesbar'); }
-      if (hl() && hl() !== 'ru') await loadDict(hl()); applyPrefs(); readerBar(); toast('Wiederhergestellt'); einstellungen();
+      if (hl()) await loadDict(hl()); applyPrefs(); readerBar(); toast('Wiederhergestellt'); einstellungen();
     }
     else if (t.dataset.act === 'reset' && !t.dataset.sure) { t.dataset.sure = '1'; t.textContent = 'Wirklich zurücksetzen? Nochmal tippen'; }
     else if (t.dataset.act === 'reset') { await idbPut('snap:vor-zuruecksetzen', fullBackup()); const keep = {}; SHARED.forEach(k => keep[k] = S[k]); S = Object.assign(fresh(), keep); save(); applyPrefs(); toast('Zurückgesetzt'); einstellungen(); }
@@ -1258,7 +1261,7 @@ async function shareApp() {
   try { await navigator.clipboard.writeText(`${SHARE_TEXT} ${APP_URL}`); toast('Link kopiert – jetzt einfügen und verschicken'); } catch { toast(APP_URL); }
 }
 function teilen() {
-  render(`${back('#mehr', 'Mehr')}<h1>App weiterempfehlen</h1><p class="muted">Kennst du jemanden, der sich einbürgern lassen möchte? Schick ihm die App – kostenlos, ohne Anmeldung.${ru('Знаете кого-то, кто хочет получить гражданство? Отправьте ему приложение — бесплатно и без регистрации.')}</p>
+  render(`${back('#mehr', 'Mehr')}<h1>App weiterempfehlen</h1><p class="muted">Kennst du jemanden, der sich einbürgern lassen möchte? Schick ihm die App – kostenlos, ohne Anmeldung.${ru('ui.do-you-know-someone-who-wants-to-bec')}</p>
     <div class="card" style="text-align:center"><img src="icons/qr.svg" alt="QR-Code zu ${APP_URL}" style="width:min(240px,70vw);aspect-ratio:1;image-rendering:pixelated;border:1px solid var(--line);border-radius:var(--radius)">
       <p class="small" style="margin:10px 0 0">QR-Code mit der Handykamera scannen lassen</p><p class="eyebrow" style="margin:6px 0 0">${APP_URL.replace('https://', '').replace(/\/$/, '')}</p></div>
     <div class="grid two">
@@ -1354,14 +1357,14 @@ function planData() {
 }
 function plan() {
   const p = planData();
-  render(`<h1>Mein Lernplan</h1><p class="muted">Trage deine Termine ein. Die App rechnet aus, wie viel du pro Tag bzw. Woche schaffen musst.${ru('Введите даты экзаменов. Приложение рассчитает, сколько нужно проходить в день или в неделю.')}</p>
+  render(`<h1>Mein Lernplan</h1><p class="muted">Trage deine Termine ein. Die App rechnet aus, wie viel du pro Tag bzw. Woche schaffen musst.${ru('ui.enter-your-exam-dates-the-app-works')}</p>
     <div class="card grid two">
       <div><label class="lbl" for="td">Termin Einbürgerungstest</label><input class="text" type="date" id="td" value="${esc(S.testdate)}"></div>
       <div><label class="lbl" for="bd">Termin B1-Sprachprüfung</label><input class="text" type="date" id="bd" value="${esc(S.b1date)}"></div>
     </div>
     ${S.testdate ? `<div class="card"><h2>Einbürgerungstest</h2>${p.tDays < 0 ? '<p>Der Termin liegt in der Vergangenheit.</p>' : `<dl class="kv"><dt>Noch</dt><dd><b>${p.tDays} Tage</b></dd><dt>Offene Fragen</dt><dd>${p.openQ} von 310</dd><dt>Pro Tag</dt><dd><b>${p.qPerDay} Fragen</b> (die letzten 3 Tage nur Wiederholung)</dd><dt>Letzte Woche</dt><dd>täglich eine Prüfungssimulation, Ziel: sicher über 25 Punkte</dd></dl>`}</div>` : ''}
     ${S.b1date ? `<div class="card"><h2>B1-Prüfung</h2>${p.bDays < 0 ? '<p>Der Termin liegt in der Vergangenheit.</p>' : `<dl class="kv"><dt>Noch</dt><dd><b>${p.bDays} Tage</b></dd><dt>Offene Lektionen</dt><dd>${p.openL} von ${D.kurs.length}</dd><dt>Pro Woche</dt><dd><b>${p.lPerWeek} Lektion${p.lPerWeek > 1 ? 'en' : ''}</b></dd><dt>Letzte 2 Wochen</dt><dd>Hören, Lesen, Schreiben und Sprechen im B1-Bereich üben</dd></dl>${p.bDays < 60 && p.openL > 10 ? '<div class="notice" style="margin:12px 0 0">Das wird knapp. Ein Integrationskurs oder ein späterer Termin kann helfen.</div>' : ''}`}</div>` : ''}
-    ${(S.testdate || S.b1date) && !EMBED ? `<div class="card"><h2>Erinnerung im Kalender</h2><p class="small">Lädt einen täglichen Lerntermin in deinen Kalender (iPhone, Android, Outlook). Dein Handy erinnert dich dann jeden Tag.${ru('Добавляет в календарь ежедневное напоминание об учёбе.')}</p>
+    ${(S.testdate || S.b1date) && !EMBED ? `<div class="card"><h2>Erinnerung im Kalender</h2><p class="small">Lädt einen täglichen Lerntermin in deinen Kalender (iPhone, Android, Outlook). Dein Handy erinnert dich dann jeden Tag.${ru('ui.adds-a-daily-study-reminder-to-your')}</p>
       <div class="row"><label class="lbl" for="pt" style="margin:0">Uhrzeit</label><input class="text" type="time" id="pt" value="${esc(S.planTime)}" style="width:auto"><button class="btn primary" data-act="ics">Erinnerung hinzufügen</button></div></div>` : ''}`);
   $app.onchange = e => {
     if (e.target.id === 'td') { S.testdate = e.target.value; save(); plan(); }
@@ -1438,7 +1441,7 @@ function lebenslauf() {
   const cv = S.cv;
   const field = (k, label, ph, type = 'text') => `<div><label class="lbl" for="cv-${k}">${label}</label><input class="text" id="cv-${k}" data-f="${k}" type="${type}" value="${esc(cv[k])}" placeholder="${esc(ph)}"></div>`;
   render(`<h1>Lebenslauf-Generator</h1>
-    <p class="muted">Viele Behörden – z. B. das Landratsamt Pirna, auch für Freital – verlangen einen ausführlichen Lebenslauf als Fließtext auf Deutsch, lückenlos ab der Geburt. Trage deine Stationen ein, die App schreibt den Text.${ru('Многие ведомства — например, Ландратсамт Пирны (и для Фрайталя) — требуют подробную автобиографию на немецком связным текстом, без пробелов с рождения. Введите этапы жизни — приложение напишет текст.')}</p>
+    <p class="muted">Viele Behörden – z. B. das Landratsamt Pirna, auch für Freital – verlangen einen ausführlichen Lebenslauf als Fließtext auf Deutsch, lückenlos ab der Geburt. Trage deine Stationen ein, die App schreibt den Text.${ru('ui.many-authorities-e-g-the-district-of')}</p>
     <div class="card grid two">
       ${field('name', 'Vor- und Nachname', 'z. B. Olga Ivanova')}
       ${field('geb', 'Geburtsdatum', '', 'date')}
@@ -1499,7 +1502,7 @@ function kosten() {
     ['Sonstiges (Fotos, Porto, Fahrten …)', 1, K.sonst, '']];
   const sum = () => rows().reduce((s, r) => s + r[1] * r[2], 0);
   const num = (k, label, step = 1) => `<div><label class="lbl small" for="k-${k}">${label}</label><input class="text" type="number" inputmode="decimal" min="0" step="${step}" id="k-${k}" data-k="${k}" value="${esc(K[k])}"></div>`;
-  render(`<h1>Kostenrechner</h1><p class="muted">Was kostet die Einbürgerung für deine Familie? Die Gebühren der Behörde sind gesetzlich festgelegt, alles andere sind Schätzwerte – trage deine echten Preise ein.${ru('Сколько стоит натурализация для вашей семьи? Сборы ведомства установлены законом, остальное — оценки: впишите реальные цены.')}</p>
+  render(`<h1>Kostenrechner</h1><p class="muted">Was kostet die Einbürgerung für deine Familie? Die Gebühren der Behörde sind gesetzlich festgelegt, alles andere sind Schätzwerte – trage deine echten Preise ein.${ru('ui.how-much-does-naturalisation-cost-fo')}</p>
     <div class="card"><h2>Personen</h2><div class="grid three">${num('erw', 'Erwachsene (ab 16)')}${num('kind', 'Kinder mit Eltern')}${num('kindAllein', 'Kinder allein')}</div></div>
     <div class="card"><h2>Prüfungen</h2><div class="grid two">${num('testPers', 'Personen Einbürgerungstest')}${num('testPreis', 'Preis Test (€)')}${num('b1Pers', 'Personen B1-Prüfung')}${num('b1Preis', 'Preis B1-Prüfung (€)', 5)}</div>
       <p class="small muted">Wer einen deutschen Schulabschluss hat, braucht weder Test noch Sprachprüfung. Im Integrationskurs ist die Prüfung oft schon enthalten.</p></div>
@@ -1523,7 +1526,7 @@ function fristWarnings() {
 }
 function fristen() {
   const F = S.fristen;
-  render(`<h1>Ablaufdaten</h1><p class="muted">Pass und Aufenthaltstitel müssen während des ganzen Verfahrens gültig sein. Trage die Daten ein – die App warnt dich 6 Monate vorher.${ru('Паспорт и вид на жительство должны быть действительны всё время процедуры. Введите даты — приложение предупредит за 6 месяцев.')}</p>
+  render(`<h1>Ablaufdaten</h1><p class="muted">Pass und Aufenthaltstitel müssen während des ganzen Verfahrens gültig sein. Trage die Daten ein – die App warnt dich 6 Monate vorher.${ru('ui.your-passport-and-residence-permit-m')}</p>
     <div class="card"><ul class="list">${F.map((f, k) => { const st = fristStatus(f.d); const n = f.d ? daysUntil(f.d) : null;
       return `<li><div class="row"><span class="ampel ${st || ''}" style="${st ? '' : 'background:var(--line)'}"></span><input class="text" data-t="${k}" value="${esc(f.t)}" aria-label="Bezeichnung" style="flex:1;min-width:0">${k > 1 ? `<button class="btn small ghost" data-del="${k}">Löschen</button>` : ''}</div>
         <div class="row" style="margin-top:8px"><label class="lbl small" for="fd${k}" style="margin:0">gültig bis</label><input class="text" type="date" id="fd${k}" data-d="${k}" value="${esc(f.d)}" style="flex:1;min-width:0"></div>
@@ -1575,26 +1578,26 @@ function platform() {
 const SHARE_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align:-3px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M12 3v12M8 7l4-4 4 4M5 12v8h14v-8"/></svg>';
 // Schritte je Gerät: [Deutsch, Hilfssprache]; {S} = Teilen-Symbol
 function installSteps(os, browser) {
-  const add = ['Auf „Hinzufügen“ tippen.', 'Нажмите «Добавить».'];
-  const menu = ['Auf das Menü ⋮ tippen.', 'Нажмите меню ⋮.'];
-  const ok = ['Bestätigen.', 'Подтвердите.'];
+  const add = ['Auf „Hinzufügen“ tippen.', 'ui.tap-add'];
+  const menu = ['Auf das Menü ⋮ tippen.', 'ui.tap-the-menu'];
+  const ok = ['Bestätigen.', 'ui.confirm'];
   const I = {
-    'ios-safari': [['Unten (iPhone) bzw. oben (iPad) auf das Teilen-Symbol {S} tippen.', 'Нажмите значок «Поделиться» {S} внизу (iPhone) или вверху (iPad).'], ['Nach unten scrollen und „Zum Home-Bildschirm“ wählen.', 'Прокрутите вниз и выберите «На экран „Домой“».'], ['Oben rechts auf „Hinzufügen“ tippen.', 'Нажмите «Добавить» вверху справа.']],
-    'ios-chrome': [['Oben rechts in der Adresszeile auf das Teilen-Symbol {S} tippen.', 'Нажмите значок «Поделиться» {S} справа в адресной строке.'], ['„Zum Home-Bildschirm“ wählen (eventuell erst „Mehr“ antippen).', 'Выберите «На экран „Домой“» (возможно, сначала нажмите «Ещё»).'], add],
-    'ios-firefox': [['Unten rechts auf das Menü ☰ tippen.', 'Нажмите меню ☰ внизу справа.'], ['„Teilen“ wählen, dann „Zum Home-Bildschirm“.', 'Выберите «Поделиться», затем «На экран „Домой“».'], add],
-    'ios-edge': [['Unten auf das Menü ⋯ tippen, dann auf „Teilen“ {S}.', 'Нажмите меню ⋯ внизу, затем «Поделиться» {S}.'], ['„Zum Home-Bildschirm“ wählen.', 'Выберите «На экран „Домой“».'], add],
-    'ios-other': [['Öffne diese Seite in Safari (Adresse kopieren und in Safari einfügen).', 'Откройте эту страницу в Safari (скопируйте адрес и вставьте его в Safari).'], ['Dann Teilen {S} → „Zum Home-Bildschirm“ → „Hinzufügen“.', 'Затем «Поделиться» {S} → «На экран „Домой“» → «Добавить».']],
-    'android-chrome': [['Oben rechts auf das Menü ⋮ tippen.', 'Нажмите меню ⋮ вверху справа.'], ['„App installieren“ oder „Zum Startbildschirm hinzufügen“ wählen.', 'Выберите «Установить приложение» или «Добавить на главный экран».'], ['Mit „Installieren“ bestätigen.', 'Подтвердите кнопкой «Установить».']],
-    'android-samsung': [['Unten rechts auf das Menü ☰ tippen.', 'Нажмите меню ☰ внизу справа.'], ['„Seite hinzufügen zu“ wählen, dann „Startbildschirm“.', 'Выберите «Добавить страницу на», затем «Главный экран».'], ['Mit „Hinzufügen“ bestätigen.', 'Подтвердите кнопкой «Добавить».']],
-    'android-firefox': [menu, ['„Installieren“ bzw. „Zum Startbildschirm hinzufügen“ wählen.', 'Выберите «Установить» или «Добавить на главный экран».'], ['Mit „Hinzufügen“ bestätigen.', 'Подтвердите кнопкой «Добавить».']],
-    'android-edge': [['Unten auf das Menü ⋯ tippen.', 'Нажмите меню ⋯ внизу.'], ['„Zum Telefon hinzufügen“ bzw. „App installieren“ wählen.', 'Выберите «Добавить на телефон» или «Установить приложение».'], ok],
-    'android-opera': [menu, ['„Zum Startbildschirm hinzufügen“ wählen.', 'Выберите «Добавить на главный экран».'], ok],
-    'android-other': [['Öffne diese Seite am besten in Chrome.', 'Лучше откройте эту страницу в Chrome.'], ['Menü ⋮ → „App installieren“.', 'Меню ⋮ → «Установить приложение».']],
-    'inapp': [['Du hast die Seite aus einer App (z. B. WhatsApp oder Telegram) geöffnet. Von dort kann man nichts installieren.', 'Вы открыли страницу из приложения (например, WhatsApp или Telegram). Оттуда ничего установить нельзя.'], ['Tippe oben rechts auf ⋯ bzw. ⋮ und wähle „Im Browser öffnen“.', 'Нажмите ⋯ или ⋮ вверху справа и выберите «Открыть в браузере».'], ['Dann erscheint die passende Anleitung.', 'После этого появится подходящая инструкция.']],
-    'desktop-chrome': [['Rechts in der Adresszeile auf das Installieren-Symbol (Bildschirm mit Pfeil) klicken.', 'Нажмите значок установки (экран со стрелкой) справа в адресной строке.'], ['„Installieren“ bestätigen.', 'Подтвердите «Установить».'], ['Noch praktischer: diese Seite am Handy öffnen.', 'Ещё удобнее: откройте эту страницу на телефоне.']],
-    'desktop-edge': [['Rechts in der Adresszeile auf „App verfügbar“ klicken.', 'Нажмите «Доступно приложение» справа в адресной строке.'], ['„Installieren“ bestätigen.', 'Подтвердите «Установить».']],
-    'desktop-safari': [['Im Menü „Ablage“ → „Zum Dock hinzufügen“ wählen.', 'В меню «Файл» выберите «Добавить в Dock».']],
-    'desktop-other': [['Am besten öffnest du die Seite auf deinem Smartphone: einbuergerung.micana.de', 'Лучше всего откройте страницу на смартфоне: einbuergerung.micana.de']]
+    'ios-safari': [['Unten (iPhone) bzw. oben (iPad) auf das Teilen-Symbol {S} tippen.', 'ui.tap-the-share-icon-s-at-the-bottom-i'], ['Nach unten scrollen und „Zum Home-Bildschirm“ wählen.', 'ui.scroll-down-and-choose-add-to-home-s'], ['Oben rechts auf „Hinzufügen“ tippen.', 'ui.tap-add-at-the-top-right']],
+    'ios-chrome': [['Oben rechts in der Adresszeile auf das Teilen-Symbol {S} tippen.', 'ui.tap-the-share-icon-s-on-the-right-of'], ['„Zum Home-Bildschirm“ wählen (eventuell erst „Mehr“ antippen).', 'ui.choose-add-to-home-screen-you-may-ne'], add],
+    'ios-firefox': [['Unten rechts auf das Menü ☰ tippen.', 'ui.tap-the-menu-at-the-bottom-right'], ['„Teilen“ wählen, dann „Zum Home-Bildschirm“.', 'ui.choose-share-then-add-to-home-screen'], add],
+    'ios-edge': [['Unten auf das Menü ⋯ tippen, dann auf „Teilen“ {S}.', 'ui.tap-the-menu-at-the-bottom-then-shar'], ['„Zum Home-Bildschirm“ wählen.', 'ui.choose-add-to-home-screen-2'], add],
+    'ios-other': [['Öffne diese Seite in Safari (Adresse kopieren und in Safari einfügen).', 'ui.open-this-page-in-safari-copy-the-ad'], ['Dann Teilen {S} → „Zum Home-Bildschirm“ → „Hinzufügen“.', 'ui.then-share-s-add-to-home-screen-add']],
+    'android-chrome': [['Oben rechts auf das Menü ⋮ tippen.', 'ui.tap-the-menu-at-the-top-right'], ['„App installieren“ oder „Zum Startbildschirm hinzufügen“ wählen.', 'ui.choose-install-app-or-add-to-home-sc'], ['Mit „Installieren“ bestätigen.', 'ui.confirm-with-install']],
+    'android-samsung': [['Unten rechts auf das Menü ☰ tippen.', 'ui.tap-the-menu-at-the-bottom-right'], ['„Seite hinzufügen zu“ wählen, dann „Startbildschirm“.', 'ui.choose-add-page-to-then-home-screen'], ['Mit „Hinzufügen“ bestätigen.', 'ui.confirm-with-add']],
+    'android-firefox': [menu, ['„Installieren“ bzw. „Zum Startbildschirm hinzufügen“ wählen.', 'ui.choose-install-or-add-to-home-screen'], ['Mit „Hinzufügen“ bestätigen.', 'ui.confirm-with-add']],
+    'android-edge': [['Unten auf das Menü ⋯ tippen.', 'ui.tap-the-menu-at-the-bottom'], ['„Zum Telefon hinzufügen“ bzw. „App installieren“ wählen.', 'ui.choose-add-to-phone-or-install-app'], ok],
+    'android-opera': [menu, ['„Zum Startbildschirm hinzufügen“ wählen.', 'ui.choose-add-to-home-screen'], ok],
+    'android-other': [['Öffne diese Seite am besten in Chrome.', 'ui.better-to-open-this-page-in-chrome'], ['Menü ⋮ → „App installieren“.', 'ui.menu-install-app']],
+    'inapp': [['Du hast die Seite aus einer App (z. B. WhatsApp oder Telegram) geöffnet. Von dort kann man nichts installieren.', 'ui.you-opened-this-page-from-an-app-e-g'], ['Tippe oben rechts auf ⋯ bzw. ⋮ und wähle „Im Browser öffnen“.', 'ui.tap-or-at-the-top-right-and-choose-o'], ['Dann erscheint die passende Anleitung.', 'ui.then-the-right-instructions-will-app']],
+    'desktop-chrome': [['Rechts in der Adresszeile auf das Installieren-Symbol (Bildschirm mit Pfeil) klicken.', 'ui.click-the-install-icon-screen-with-a'], ['„Installieren“ bestätigen.', 'ui.confirm-install'], ['Noch praktischer: diese Seite am Handy öffnen.', 'ui.even-better-open-this-page-on-your-p']],
+    'desktop-edge': [['Rechts in der Adresszeile auf „App verfügbar“ klicken.', 'ui.click-app-available-on-the-right-of'], ['„Installieren“ bestätigen.', 'ui.confirm-install']],
+    'desktop-safari': [['Im Menü „Ablage“ → „Zum Dock hinzufügen“ wählen.', 'ui.in-the-file-menu-choose-add-to-dock']],
+    'desktop-other': [['Am besten öffnest du die Seite auf deinem Smartphone: einbuergerung.micana.de', 'ui.it-is-best-to-open-the-page-on-your']]
   };
   return I[browser === 'inapp' ? 'inapp' : `${os}-${browser}`] || I[`${os}-other`] || I['desktop-other'];
 }
@@ -1607,12 +1610,12 @@ function installGuide(os, browser, compact) {
   return `<p class="small muted">Erkannt: ${OS_NAME[os]} · ${BR_NAME[browser]}</p>
     <button class="btn primary block" data-act="native-install" ${deferredPrompt ? '' : 'hidden'} style="margin-bottom:12px">Jetzt installieren</button>
     ${stepList(installSteps(os, browser))}
-    ${compact ? '' : `<p class="small">Danach findest du „Einbürgerung“ als Symbol auf dem Startbildschirm. Die App startet ohne Adresszeile und funktioniert auch offline.${ru('После этого на главном экране появится значок «Einbürgerung». Приложение запускается без адресной строки и работает без интернета.')}</p>`}`;
+    ${compact ? '' : `<p class="small">Danach findest du „Einbürgerung“ als Symbol auf dem Startbildschirm. Die App startet ohne Adresszeile und funktioniert auch offline.${ru('ui.afterwards-you-will-find-the-einb-rg')}</p>`}`;
 }
 async function nativeInstall() { if (!deferredPrompt) return; deferredPrompt.prompt(); const r = await deferredPrompt.userChoice; deferredPrompt = null; if (r.outcome === 'accepted') { appInstalled = true; S.installSeen = true; save(); closeSheet(); if (document.getElementById('gate')) installGate(true); } }
 function installieren() {
   const p = platform();
-  render(`<h1>Als App installieren</h1>${ru('Установить как приложение')}
+  render(`<h1>Als App installieren</h1>${ru('ui.install-as-an-app')}
     ${p.standalone ? '<div class="notice ok" style="margin-top:12px">Die App ist bereits installiert. 👍</div>' : ''}
     <div class="card" style="margin-top:14px"><h2>Dein Gerät</h2>${installGuide(p.os, p.browser)}</div>
     <h2>Andere Geräte</h2>
@@ -1643,18 +1646,18 @@ function installGate(force) {
     el.innerHTML = `<div class="gate-in">
       <div class="gate-top"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="2" width="28" height="28" rx="8" fill="currentColor"/><path d="M10 16.5l4 4 8-9" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><b>Einbürgerung <small>Sachsen</small></b><span class="spacer"></span>
         <label class="gate-lang"><span class="sr">Sprache · Language</span><select data-glang aria-label="Sprache · Language">${[...HL, 'de'].map(l => `<option value="${l}" ${H === l ? 'selected' : ''} lang="${l}">${l === 'de' ? 'Deutsch' : LANG[l].name}</option>`).join('')}</select></label></div>
-      ${appInstalled ? `<h1 id="gate-h">Die App ist installiert</h1>${ru('Приложение установлено')}
-        <div class="notice ok" style="margin-top:14px">Öffne sie jetzt über das Symbol „Einbürgerung“ auf deinem Startbildschirm. Dieses Browserfenster kannst du schließen.${ru('Откройте его через значок «Einbürgerung» на главном экране. Это окно браузера можно закрыть.')}</div>`
-      : `<h1 id="gate-h">Zuerst die App installieren</h1>${ru('Сначала установите приложение')}
-        <div class="card gate-card"><h2>So geht's</h2>${ru('Как это сделать')}<div style="margin-top:10px">${installGuide(p.os, p.browser, true)}</div>
+      ${appInstalled ? `<h1 id="gate-h">Die App ist installiert</h1>${ru('ui.the-app-is-installed')}
+        <div class="notice ok" style="margin-top:14px">Öffne sie jetzt über das Symbol „Einbürgerung“ auf deinem Startbildschirm. Dieses Browserfenster kannst du schließen.${ru('ui.open-it-now-using-the-einb-rgerung-i')}</div>`
+      : `<h1 id="gate-h">Zuerst die App installieren</h1>${ru('ui.install-the-app-first')}
+        <div class="card gate-card"><h2>So geht's</h2>${ru('ui.how-it-works')}<div style="margin-top:10px">${installGuide(p.os, p.browser, true)}</div>
           ${p.browser === 'inapp' || p.browser === 'other' ? `<button class="btn small" data-act="copy-url" style="margin-top:4px">Adresse kopieren</button>` : ''}</div>
         <ul class="gate-why">
-          <li><b>Immer auf dem Startbildschirm</b> – wie eine richtige App.${ru('Всегда на главном экране — как настоящее приложение.')}</li>
-          <li><b>Funktioniert ohne Internet</b> – auch unterwegs.${ru('Работает без интернета — и в дороге.')}</li>
-          <li><b>Dein Lernstand ist sicherer</b> – der Browser löscht ihn nicht so leicht.${ru('Ваш прогресс надёжнее сохранён — браузер не удалит его так просто.')}</li>
+          <li><b>Immer auf dem Startbildschirm</b> – wie eine richtige App.${ru('ui.always-on-your-home-screen-like-a-re')}</li>
+          <li><b>Funktioniert ohne Internet</b> – auch unterwegs.${ru('ui.works-without-internet-even-on-the-g')}</li>
+          <li><b>Dein Lernstand ist sicherer</b> – der Browser löscht ihn nicht so leicht.${ru('ui.your-progress-is-safer-the-browser-w')}</li>
         </ul>
-        ${p.os === 'ios' && p.browser !== 'inapp' ? `<div class="notice">Wichtig auf iPhone und iPad: Was du hier im Browser lernst, wird <b>nicht</b> in die installierte App übernommen. Installiere deshalb jetzt zuerst.${ru('Важно на iPhone и iPad: то, что вы учите здесь в браузере, не переносится в установленное приложение. Поэтому сначала установите его.')}</div>` : ''}`}
-      <button class="gate-skip" data-act="gate-skip">${appInstalled ? 'Trotzdem im Browser weiter' : 'Ohne Installation im Browser weiter'}${ru(appInstalled ? 'Всё равно продолжить в браузере' : 'Продолжить в браузере без установки')}</button>
+        ${p.os === 'ios' && p.browser !== 'inapp' ? `<div class="notice">Wichtig auf iPhone und iPad: Was du hier im Browser lernst, wird <b>nicht</b> in die installierte App übernommen. Installiere deshalb jetzt zuerst.${ru('ui.important-on-iphone-and-ipad-what-yo')}</div>` : ''}`}
+      <button class="gate-skip" data-act="gate-skip">${appInstalled ? 'Trotzdem im Browser weiter' : 'Ohne Installation im Browser weiter'}${ru(appInstalled ? 'ui.continue-in-the-browser-anyway' : 'ui.continue-in-the-browser-without-inst')}</button>
     </div>`;
   };
   draw();
@@ -1678,7 +1681,7 @@ function installGate(force) {
 function nag(p) {
   if (document.getElementById('nag')) return;
   const el = document.createElement('button'); el.id = 'nag'; el.className = 'nag no-print';
-  const h = hl() ? tr('Приложение не установлено') : '';
+  const h = hl() ? tr('ui.app-not-installed') : '';
   el.innerHTML = `<span><b>App nicht installiert</b>${h ? `<span class="ru" lang="${hl()}"${dirAttr(hl())}>${esc(h)}</span>` : ''}</span><span class="go">Installieren ›</span>`;
   el.onclick = () => installGate(true);
   document.body.appendChild(el); document.body.classList.add('nagged');
@@ -1690,7 +1693,7 @@ function desktopSheet(p) {
   if (S.installSeen || later || !S.onboarded || document.getElementById('sheet')) return;
   const el = document.createElement('div');
   el.id = 'sheet'; el.className = 'sheet-wrap'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'sheet-h');
-  el.innerHTML = `<div class="sheet"><h2 id="sheet-h">Als App speichern</h2><p class="small">So hast du die App immer griffbereit – auch ohne Internet. Am bequemsten lernst du am Handy.${ru('Так приложение всегда под рукой — даже без интернета. Удобнее всего учиться на телефоне.')}</p>${installGuide(p.os, p.browser, true)}
+  el.innerHTML = `<div class="sheet"><h2 id="sheet-h">Als App speichern</h2><p class="small">So hast du die App immer griffbereit – auch ohne Internet. Am bequemsten lernst du am Handy.${ru('ui.this-way-the-app-is-always-at-hand-e')}</p>${installGuide(p.os, p.browser, true)}
     <div class="row" style="margin-top:6px"><button class="btn ghost" data-sheet="later">Später</button><span class="spacer"></span><button class="btn primary" data-sheet="ok">Verstanden</button></div></div>`;
   document.body.appendChild(el);
   el.onclick = e => {
@@ -1721,12 +1724,12 @@ function guessLang() {
 }
 function sprache(mode) {
   const first = mode === 'erst' && !S.onboarded;
-  if (first && !S.lang) { const g = guessLang(); if (g) { S.lang = g; if (g !== 'ru') loadDict(g).then(ok => { if (!ok) S.lang = ''; if (location.hash.startsWith('#sprache')) sprache(mode); }); } }
+  if (first && !S.lang) { const g = guessLang(); if (g) { S.lang = g; loadDict(g).then(ok => { if (!ok) S.lang = ''; if (location.hash.startsWith('#sprache')) sprache(mode); }); } }
   render(`${first ? '' : back('#einstellungen', 'Einstellungen')}
     ${first ? `<div class="welcome"><div class="eyebrow">Einbürgerung Sachsen</div><h1>Willkommen!</h1><p class="muted" style="margin:0">${many(0)}</p></div>` : '<h1>Sprache</h1>'}
     <p style="margin-top:14px"><b>Welche Sprache möchtest du zusätzlich zu Deutsch?</b><span class="small" style="display:block;color:var(--ru)">${many(1)}</span></p>
     ${langChoice(first)}
-    <p class="small muted">Deutsch steht immer an erster Stelle. Du kannst die Sprache jederzeit unter <b>Einstellungen</b> ändern.${ru('Немецкий всегда на первом месте. Язык можно изменить в любое время в настройках.')}</p>
+    <p class="small muted">Deutsch steht immer an erster Stelle. Du kannst die Sprache jederzeit unter <b>Einstellungen</b> ändern.${ru('ui.german-always-comes-first-you-can-ch')}</p>
     ${first ? `<div class="row end"><button class="btn primary" data-act="weiter" ${S.lang ? '' : 'disabled'}>Weiter ›</button></div>` : '<div class="row"><a class="btn" href="#tutorial">Einführung ansehen</a></div>'}`);
   $app.onclick = async e => {
     const b = e.target.closest('[data-lang]');
@@ -1741,31 +1744,31 @@ const NAV_SVG = id => document.querySelector(`.nav [data-nav="${id}"] svg`)?.out
 function tutorialSlides() {
   return [
     { ico: '<svg viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="28" rx="8" fill="currentColor"/><path d="M10 16.5l4 4 8-9" stroke="var(--brand-ink)" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-      t: ['Deine Lernhilfe für die Einbürgerung', 'Ваш помощник для получения гражданства'],
-      p: [['Hier lernst du alles für den Einbürgerungstest und die B1-Prüfung und findest Unterlagen und Behörden in Sachsen.', 'Здесь вы готовитесь к тесту на натурализацию и экзамену B1, а также найдёте документы и ведомства в Саксонии.'],
-          ['Kostenlos, ohne Anmeldung, funktioniert auch ohne Internet.', 'Бесплатно, без регистрации, работает и без интернета.']] },
-    { ico: NAV_SVG('start'), t: ['Start: dein Tag', 'Старт: ваш день'],
-      p: [['Der Ring zeigt dein Tagesziel. Darunter steht, was heute dran ist.', 'Кольцо показывает вашу цель на день. Ниже — что нужно сделать сегодня.'],
-          ['„Schritt für Schritt“ zeigt den ganzen Weg bis zur Urkunde.', '«Шаг за шагом» показывает весь путь до получения документа о гражданстве.']] },
-    { ico: NAV_SVG('test'), t: ['Test: lernen und üben', 'Тест: учить и тренироваться'],
-      p: [['„Lernen“ fragt dich klug ab: Fragen, die du falsch hattest, kommen öfter wieder.', '«Учить» спрашивает с умом: вопросы, на которые вы ответили неправильно, повторяются чаще.'],
-          ['„Prüfung simulieren“ ist wie der echte Test: 33 Fragen in 60 Minuten. Bestanden ab 17 richtigen.', '«Пробный экзамен» как настоящий тест: 33 вопроса за 60 минут. Сдан от 17 правильных ответов.']] },
-    { ico: `<svg viewBox="0 0 24 24">${SAY_ICON.replace(/^<svg[^>]*>|<\/svg>$/g, '')}</svg>`, t: ['Hilfen auf jeder Seite', 'Помощь на каждой странице'], demo: true,
-      p: [['Gepunktet unterstrichene Wörter antippen – dann kommt eine einfache Erklärung.', 'Нажмите на слово, подчёркнутое пунктиром, — появится простое объяснение.'],
-          ['Lautsprecher = vorlesen. Mikrofon = nachsprechen, die App prüft deine Aussprache.', 'Динамик — прочитать вслух. Микрофон — повторить, приложение проверит произношение.'],
-          ['Unten rechts kannst du die ganze Seite vorlesen lassen.', 'Внизу справа можно включить чтение всей страницы.']] },
-    { ico: NAV_SVG('kurs'), t: ['Deutsch: von A1 bis B1', 'Немецкий: от A1 до B1'],
-      p: [['30 Lektionen mit Grammatik, Wörtern, Dialogen und Übungen.', '30 уроков с грамматикой, словами, диалогами и упражнениями.'],
-          ['Dazu ein Vokabeltrainer und Aufgaben wie in der B1-Prüfung.', 'Плюс тренажёр слов и задания как на экзамене B1.']] },
-    { ico: NAV_SVG('docs'), t: ['Unterlagen und Behörden', 'Документы и ведомства'],
-      p: [['Hake ab, welche Unterlagen du schon hast. Finde deine Einbürgerungsbehörde über Ort oder Postleitzahl.', 'Отмечайте, какие документы уже есть. Найдите своё ведомство по городу или почтовому индексу.'],
-          ['Unter „Mehr“: Lernplan, Lebenslauf, Kosten, Ablaufdaten, Briefvorlagen und vieles mehr.', 'В разделе «Mehr» (Ещё): план обучения, автобиография, расходы, сроки документов, шаблоны писем и многое другое.']] },
-    { ico: NAV_SVG('profil'), t: ['Dein Fortschritt', 'Ваш прогресс'],
-      p: [['Alles wird automatisch gespeichert – nur auf diesem Gerät, ohne Konto.', 'Всё сохраняется автоматически — только на этом устройстве, без аккаунта.'],
-          ['Lade ab und zu unter „Einstellungen“ eine Sicherungsdatei herunter, z. B. für ein neues Handy. Mehrere Personen? Nutzt den Familienmodus.', 'Время от времени скачивайте файл резервной копии в настройках, например для нового телефона. Несколько человек? Используйте семейный режим.']] },
-    { ico: NAV_SVG('einstellungen'), t: ['Sprache und Einführung', 'Язык и введение'],
-      p: [['Die Sprache kannst du jederzeit unter „Einstellungen“ ändern – auch auf „Nur Deutsch“.', 'Язык можно изменить в любое время в настройках — в том числе на «Только немецкий».'],
-          ['Diese Einführung findest du dort und unter „Mehr“ wieder. Viel Erfolg!', 'Это введение можно снова открыть там и в разделе «Mehr». Удачи!']] }
+      t: ['Deine Lernhilfe für die Einbürgerung', 'ui.your-guide-to-naturalisation'],
+      p: [['Hier lernst du alles für den Einbürgerungstest und die B1-Prüfung und findest Unterlagen und Behörden in Sachsen.', 'ui.here-you-prepare-for-the-naturalisat'],
+          ['Kostenlos, ohne Anmeldung, funktioniert auch ohne Internet.', 'ui.free-no-registration-and-it-also-wor']] },
+    { ico: NAV_SVG('start'), t: ['Start: dein Tag', 'ui.start-your-day'],
+      p: [['Der Ring zeigt dein Tagesziel. Darunter steht, was heute dran ist.', 'ui.the-ring-shows-your-daily-goal-below'],
+          ['„Schritt für Schritt“ zeigt den ganzen Weg bis zur Urkunde.', 'ui.schritt-f-r-schritt-step-by-step-sho']] },
+    { ico: NAV_SVG('test'), t: ['Test: lernen und üben', 'ui.test-learn-and-practise'],
+      p: [['„Lernen“ fragt dich klug ab: Fragen, die du falsch hattest, kommen öfter wieder.', 'ui.lernen-learn-asks-you-cleverly-quest'],
+          ['„Prüfung simulieren“ ist wie der echte Test: 33 Fragen in 60 Minuten. Bestanden ab 17 richtigen.', 'ui.pr-fung-simulieren-practice-exam-is']] },
+    { ico: `<svg viewBox="0 0 24 24">${SAY_ICON.replace(/^<svg[^>]*>|<\/svg>$/g, '')}</svg>`, t: ['Hilfen auf jeder Seite', 'ui.help-on-every-page'], demo: true,
+      p: [['Gepunktet unterstrichene Wörter antippen – dann kommt eine einfache Erklärung.', 'ui.tap-a-word-with-a-dotted-underline-a'],
+          ['Lautsprecher = vorlesen. Mikrofon = nachsprechen, die App prüft deine Aussprache.', 'ui.speaker-read-aloud-microphone-repeat'],
+          ['Unten rechts kannst du die ganze Seite vorlesen lassen.', 'ui.at-the-bottom-right-you-can-have-the']] },
+    { ico: NAV_SVG('kurs'), t: ['Deutsch: von A1 bis B1', 'ui.german-from-a1-to-b1'],
+      p: [['30 Lektionen mit Grammatik, Wörtern, Dialogen und Übungen.', 'ui.30-lessons-with-grammar-vocabulary-d'],
+          ['Dazu ein Vokabeltrainer und Aufgaben wie in der B1-Prüfung.', 'ui.plus-a-vocabulary-trainer-and-tasks']] },
+    { ico: NAV_SVG('docs'), t: ['Unterlagen und Behörden', 'ui.documents-and-authorities'],
+      p: [['Hake ab, welche Unterlagen du schon hast. Finde deine Einbürgerungsbehörde über Ort oder Postleitzahl.', 'ui.tick-off-which-documents-you-already'],
+          ['Unter „Mehr“: Lernplan, Lebenslauf, Kosten, Ablaufdaten, Briefvorlagen und vieles mehr.', 'ui.under-mehr-more-study-plan-cv-costs']] },
+    { ico: NAV_SVG('profil'), t: ['Dein Fortschritt', 'ui.your-progress'],
+      p: [['Alles wird automatisch gespeichert – nur auf diesem Gerät, ohne Konto.', 'ui.everything-is-saved-automatically-on'],
+          ['Lade ab und zu unter „Einstellungen“ eine Sicherungsdatei herunter, z. B. für ein neues Handy. Mehrere Personen? Nutzt den Familienmodus.', 'ui.download-a-backup-file-in-the-settin']] },
+    { ico: NAV_SVG('einstellungen'), t: ['Sprache und Einführung', 'ui.language-and-introduction'],
+      p: [['Die Sprache kannst du jederzeit unter „Einstellungen“ ändern – auch auf „Nur Deutsch“.', 'ui.you-can-change-the-language-at-any-t'],
+          ['Diese Einführung findest du dort und unter „Mehr“ wieder. Viel Erfolg!', 'ui.you-can-open-this-introduction-again']] }
   ];
 }
 function tutorial(mode) {
@@ -1780,7 +1783,7 @@ function tutorial(mode) {
       <div class="tut-ico" aria-hidden="true">${s.ico}</div>
       <h1>${esc(s.t[0])} ${say(s.t[0])}</h1>${ru(s.t[1])}
       ${s.p.map(([d, r]) => `<p>${esc(d)} ${say(d)}${ru(r)}</p>`).join('')}
-      ${s.demo ? `<div class="card tut-demo"><div class="small muted" style="margin-bottom:6px">Probier es aus:${ru('Попробуйте:')}</div><div class="q-text" style="font-size:1.05em">Was steht im ${gloss('Grundgesetz')}? ${say('Was steht im Grundgesetz?')} ${mic('Was steht im Grundgesetz?')}</div></div>` : ''}
+      ${s.demo ? `<div class="card tut-demo"><div class="small muted" style="margin-bottom:6px">Probier es aus:${ru('ui.try-it')}</div><div class="q-text" style="font-size:1.05em">Was steht im ${gloss('Grundgesetz')}? ${say('Was steht im Grundgesetz?')} ${mic('Was steht im Grundgesetz?')}</div></div>` : ''}
       <div class="dots" aria-hidden="true">${slides.map((_, i) => `<i class="${i === k ? 'on' : ''}"></i>`).join('')}</div>
       <div class="row tut-nav">${k ? '<button class="btn" data-act="prev">‹ Zurück</button>' : `${first ? '<a class="btn ghost" href="#sprache--erst">‹ Sprache</a>' : ''}`}<span class="spacer"></span><button class="btn primary" data-act="${last ? 'done' : 'next'}">${last ? (first ? 'Los geht’s' : 'Fertig') : 'Weiter ›'}</button></div>
     </div>`);
@@ -1818,7 +1821,7 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
 function showUpdate(worker) {
   if (document.getElementById('update')) return;
   const el = document.createElement('div'); el.id = 'update'; el.className = 'update no-print'; el.setAttribute('role', 'status');
-  el.innerHTML = `<div><b>Neue Version verfügbar</b>${ru('Доступна новая версия')}</div><button class="btn small primary" data-up>Jetzt laden</button>`;
+  el.innerHTML = `<div><b>Neue Version verfügbar</b>${ru('ui.new-version-available')}</div><button class="btn small primary" data-up>Jetzt laden</button>`;
   el.querySelector('[data-up]').onclick = () => { save(); worker.postMessage({ type: 'SKIP_WAITING' }); el.querySelector('[data-up]').textContent = 'Lädt …'; };
   document.body.appendChild(el);
 }

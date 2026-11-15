@@ -1,7 +1,7 @@
 // Service Worker: alles für die Offline-Nutzung vorhalten.
 // Bei jeder Inhaltsänderung (Code ODER Daten) CACHE hochzählen, damit Geräte die neue Version laden.
 // Code und Daten kommen immer aus demselben Cache – so passen sie zusammen, bis der Nutzer „Jetzt laden“ tippt.
-const CACHE = 'eb-v1.5.0';
+const CACHE = 'eb-v1.6.0';
 const ASSETS = [
   './', 'index.html', 'app.css', 'app.js', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png',
@@ -11,7 +11,7 @@ const ASSETS = [
   'img/aufgabe_187.webp', 'img/aufgabe_226.webp', 'img/sachsen_1.webp', 'img/sachsen_8.webp'
 ];
 // Wörterbücher der Hilfssprachen werden erst geladen, wenn jemand die Sprache wählt
-const DICT = /\/data\/(en|tr|ar|pl|ro)\.json$/;
+const DICT = /\/data\/i18n\/[a-z]{2}\.json$/;
 
 async function install() {
   const c = await caches.open(CACHE);
@@ -19,7 +19,7 @@ async function install() {
   const used = new Set();
   for (const k of await caches.keys()) {
     if (k === CACHE) continue;
-    for (const r of await (await caches.open(k)).keys()) { const p = new URL(r.url).pathname; if (DICT.test(p)) used.add('data/' + p.split('/data/')[1]); }
+    for (const r of await (await caches.open(k)).keys()) { const p = new URL(r.url).pathname; if (DICT.test(p)) used.add('data/i18n/' + p.split('/').pop()); }
   }
   // cache: 'reload' umgeht den HTTP-Cache des Browsers, sonst landet evtl. eine alte Datei in der neuen Version
   await Promise.all([...ASSETS, ...used].map(async u => {
@@ -36,7 +36,13 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
-self.addEventListener('message', e => { if (e.data?.type === 'SKIP_WAITING') self.skipWaiting(); });
+self.addEventListener('message', e => {
+  if (e.data?.type === 'SKIP_WAITING') self.skipWaiting();
+  // die App meldet ein geladenes Wörterbuch → für offline ablegen
+  if (e.data?.type === 'CACHE' && DICT.test(new URL(e.data.url, self.location).pathname)) {
+    e.waitUntil(caches.open(CACHE).then(async c => { if (!(await c.match(e.data.url))) { const r = await fetch(e.data.url); if (r.ok) await c.put(e.data.url, r); } }));
+  }
+});
 // Erst Cache, sonst Netz. Nur erfolgreiche Antworten werden gespeichert (kein 404/500 im Cache).
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
