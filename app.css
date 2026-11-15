@@ -3,10 +3,10 @@
 @font-face{font-family:"Lora";src:url("fonts/Lora-Variable.ttf") format("truetype");font-weight:400 700;font-display:swap}
 :root{
   --bg:#f3f5f1; --surface:#ffffff; --surface-2:#e9eee9; --line:#cfd8d1;
-  --ink:#14231c; --ink-2:#44544c; --ink-3:#6f7d76;
+  --ink:#14231c; --ink-2:#44544c; --ink-3:#5c6a63; /* ink-3 ≥ 4.5:1 auf --bg */
   --brand:#145c3f; --brand-2:#2f8a63; --brand-ink:#ffffff; --brand-soft:#e1eee6;
-  --gold:#a87c14; --gold-soft:#faf3e1;
-  --ok:#17704a; --ok-soft:#e4f3ea; --bad:#9b2c2c; --bad-soft:#f9ecea; --warn:#946300; --warn-soft:#fbf2dc;
+  --gold:#8a6510; --gold-soft:#faf3e1; /* Text-Kontrast ≥ 4.5:1 */
+  --ok:#17704a; --ok-soft:#e4f3ea; --bad:#9b2c2c; --bad-soft:#f9ecea; --warn:#7f5600; --warn-soft:#fbf2dc;
   --ru:#535892;
   --guil-a:rgba(20,92,63,.075); --guil-b:rgba(168,124,20,.09);
   --radius:6px; --radius-s:4px;
@@ -147,7 +147,7 @@ main{flex:1;min-width:0;padding:20px max(16px,env(safe-area-inset-right)) calc(v
 .spacer{flex:1}
 
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
-.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px;cursor:pointer;font-size:.9em;min-height:38px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;cursor:pointer;font-size:.9em;min-height:42px}
 .chip.on{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
 
 .tabs{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:16px;overflow-x:auto}
@@ -163,7 +163,7 @@ main{flex:1;min-width:0;padding:20px max(16px,env(safe-area-inset-right)) calc(v
 .badge.warn{background:var(--warn-soft);color:var(--warn)}
 .badge.brand{background:var(--brand-soft);color:var(--brand)}
 
-.back{display:inline-flex;align-items:center;gap:6px;color:var(--ink-2);text-decoration:none;margin-bottom:12px;min-height:40px;font-family:var(--mono);font-size:.72em;letter-spacing:.1em;text-transform:uppercase}
+.back{display:inline-flex;align-items:center;gap:6px;color:var(--ink-2);text-decoration:none;margin-bottom:12px;min-height:44px;font-family:var(--mono);font-size:.72em;letter-spacing:.1em;text-transform:uppercase}
 
 /* Frage */
 .q-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;color:var(--ink-2);font-family:var(--mono);font-size:.64em;letter-spacing:.1em;text-transform:uppercase}
@@ -188,7 +188,7 @@ main{flex:1;min-width:0;padding:20px max(16px,env(safe-area-inset-right)) calc(v
 
 .exam-bar{padding:0 0 10px}
 .dots{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
-.dots button{width:30px;height:30px;border-radius:var(--radius-s);border:1px solid var(--line);background:var(--surface);font-size:.72em;cursor:pointer;padding:0;font-family:var(--mono)}
+.dots button{width:38px;height:38px;border-radius:var(--radius-s);border:1px solid var(--line);background:var(--surface);font-size:.72em;cursor:pointer;padding:0;font-family:var(--mono)}
 .dots button.done{background:var(--brand-soft);border-color:var(--brand)}
 .dots button.cur{outline:2px solid var(--brand);outline-offset:1px}
 
@@ -279,7 +279,7 @@ details.level[open] .chev{transform:rotate(90deg)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
 /* Vorlese- und Mikrofon-Knöpfe */
-.say{display:inline-flex;align-items:center;gap:2px;vertical-align:middle;cursor:pointer;color:var(--brand);border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:3px 7px;margin-left:4px;line-height:1;font-family:var(--mono);font-size:max(11px,.62em);font-weight:500;min-height:26px}
+.say{display:inline-flex;align-items:center;gap:2px;vertical-align:middle;cursor:pointer;color:var(--brand);border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:4px 8px;margin-inline-start:4px;line-height:1;font-family:var(--mono);font-size:max(11px,.62em);font-weight:500;min-height:32px;min-width:32px;justify-content:center}
 .say svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .say small{font-size:1em;letter-spacing:.06em}
 .ru .say{color:var(--ru)}
@@ -352,3 +352,32 @@ body.onboarding main{padding-bottom:calc(32px + env(safe-area-inset-bottom))}
 .dots i{width:8px;height:8px;border-radius:50%;background:var(--line)}
 .dots i.on{background:var(--brand);width:22px;border-radius:99px}
 body.onboarding .nag{left:0}
+
+/* ---------- 1.5: Sprachen, Navigation, Lernen, Barrierefreiheit ---------- */
+.ru[dir="rtl"],[dir="rtl"].ru{text-align:right;unicode-bidi:isolate}
+.lang .ai{font-size:.72em;margin-top:2px}
+.gate-lang select{border:1px solid var(--line);border-radius:99px;background:var(--surface);padding:6px 12px;min-height:40px;font-size:.85em;color:var(--ink)}
+.skip{position:fixed;left:8px;top:-60px;z-index:100;background:var(--brand);color:var(--brand-ink);padding:10px 14px;border-radius:var(--radius-s);font-weight:600}
+.skip:focus{top:8px}
+/* „Mehr“ in Gruppen */
+.group-h{font-family:var(--mono);font-size:.68em;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);margin:22px 0 10px;font-weight:600}
+.group-h:first-of-type{margin-top:6px}
+.tile.compact{padding:13px 34px 13px 14px}
+.tile.compact h3{font-size:1em}
+.nav .nav-h{display:none}
+@media (min-width:900px){.nav .nav-h{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);padding:12px 12px 4px}}
+/* Startseite: nächster Schritt */
+.next{display:flex;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;text-decoration:none;color:inherit}
+.next .n{flex:none;width:36px;height:36px;border-radius:50%;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;font-family:var(--serif);font-weight:700}
+.next .b{flex:1;min-width:0}.next .b b{display:block;font-family:var(--serif);font-size:1.05em}
+.next .go{flex:none;color:var(--brand);font-family:var(--serif);font-size:1.3em}
+/* Lernen/Prüfung */
+.sticky-next{position:sticky;bottom:calc(var(--nav-h) + 58px + env(safe-area-inset-bottom));z-index:5;background:linear-gradient(transparent,var(--bg) 30%);padding:18px 0 4px}
+@media (min-width:900px){.sticky-next{bottom:8px;padding-right:150px}}
+@media (max-width:899px){.sticky-next .btn{flex:1}}
+.sticky-next .btn{min-width:160px}
+.kbd-hint{font-size:.75em;color:var(--ink-3);margin-top:10px}
+@media (hover:none){.kbd-hint{display:none}}
+.dots button.open{border-style:dashed}
+.flash:focus-visible{outline:2.5px solid var(--brand);outline-offset:3px}
+@media (forced-colors:active){.opt.sel,.opt.right,.opt.wrong,.lang.on,.chip.on{outline:3px solid CanvasText}}
