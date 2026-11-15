@@ -1,14 +1,46 @@
 // Einbürgerung Sachsen – Lern-App (PWA). Vanilla JS, keine Abhängigkeiten.
-const VERSION = '1.4.0';
+const VERSION = '1.5.0';
 const $app = document.getElementById('app');
 const DAY = 86400000;
 
 /* ---------- Zustand (lokal im Browser) ---------- */
 const KEY = 'eb.v1';
+const LANG_CODES = ['', 'de', 'ru', 'en', 'tr', 'ar', 'pl', 'ro']; // '' = noch nicht gewählt
 const defaults = { ru: true, theme: 'auto', size: 'm', srs: {}, wrong: {}, exams: [], kurs: {}, vok: {}, docs: {}, persona: ['angestellt'], check: {}, amt: null, einreise: '', ehe: false, testdate: '', b1date: '', planTime: '19:00', cv: null, kosten: null, fristen: [{ id: 'pass', t: 'Reisepass', d: '' }, { id: 'titel', t: 'Aufenthaltstitel', d: '' }], installSeen: false, lang: '', onboarded: false };
 // Familienmodus: mehrere Profile; Unterlagen, Behörde, Kosten und Termin-Checklisten sind gemeinsam.
 const SHARED = ['docs', 'persona', 'amt', 'kosten', 'term', 'ru', 'theme', 'size', 'installSeen', 'lang', 'onboarded'];
-Object.assign(defaults, { daily: {}, stat: {}, milestones: {}, term: {} });
+Object.assign(defaults, { daily: {}, stat: {}, milestones: {}, term: {}, drafts: {} });
+// Immer eine frische Kopie: sonst teilen sich Profile und „Zurücksetzen“ dieselben Objekte (srs, wrong, fristen …)
+const fresh = () => structuredClone(defaults);
+const kind = v => v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v;
+// Gespeicherte Werte mit falschem Typ (beschädigt oder aus fremder Datei) durch Standardwerte ersetzen
+function clean(st) {
+  const out = {};
+  if (!st || kind(st) !== 'object') return out;
+  for (const k in st) {
+    if (k === '_ts') continue;
+    const d = defaults[k], v = st[k];
+    if (!(k in defaults)) { if (['lastExport', 'dtzDone'].includes(k) && ['number', 'object'].includes(kind(v))) out[k] = v; continue; }
+    if (d === null ? ['null', k === 'amt' ? 'string' : 'object'].includes(kind(v)) : kind(v) === kind(d)) out[k] = v;
+  }
+  // Einträge in Lernständen prüfen
+  const filt = (k, ok) => { if (out[k]) out[k] = Object.fromEntries(Object.entries(out[k]).filter(([, v]) => ok(v))); };
+  const num = x => typeof x === 'number' && isFinite(x);
+  filt('srs', v => v && num(v.l) && num(v.due)); filt('vok', v => v && num(v.l) && num(v.due));
+  filt('stat', v => v && num(v.r) && num(v.w)); filt('daily', num);
+  ['wrong', 'docs', 'term', 'milestones'].forEach(k => filt(k, v => typeof v === 'boolean'));
+  filt('check', num); filt('drafts', v => typeof v === 'string');
+  if (out.exams) out.exams = out.exams.filter(e => e && num(e.date) && num(e.score) && num(e.total));
+  if (out.fristen) out.fristen = out.fristen.filter(f => f && typeof f.t === 'string' && typeof f.d === 'string').map(f => ({ id: String(f.id || 'x' + Math.random().toString(36).slice(2)), t: f.t, d: f.d }));
+  if (out.persona) out.persona = out.persona.filter(p => typeof p === 'string');
+  if (out.kosten) out.kosten = Object.fromEntries(Object.entries(out.kosten).filter(([, v]) => num(v)));
+  if ('cv' in out && out.cv !== null) {
+    const cv = out.cv, str = x => typeof x === 'string' ? x : '';
+    out.cv = kind(cv) !== 'object' || !Array.isArray(cv.entries) ? null : { name: str(cv.name), geb: str(cv.geb), ort: str(cv.ort), eltern: str(cv.eltern), geschwister: str(cv.geschwister), schluss: str(cv.schluss),
+      entries: cv.entries.filter(e => e && kind(e) === 'object').map(e => ({ typ: ['schule', 'ausbildung', 'studium', 'arbeit', 'wehrdienst', 'ohne', 'wohnort', 'einreise', 'heirat', 'kind', 'kurs', 'sonst'].includes(e.typ) ? e.typ : 'sonst', von: str(e.von), bis: str(e.bis), was: str(e.was), wo: str(e.wo) })) };
+  }
+  return out;
+}
 /* ---------- Sicheres Speichern ----------
    Jede Änderung geht sofort in localStorage UND IndexedDB (zweite Ablage).
    Beim Start wird die neuere bzw. vorhandene Kopie genommen; täglich ein Sicherungspunkt (7 Tage). */
@@ -65,30 +97,47 @@ function fullBackup() {
   P.list.forEach(p => { data.own[p.id] = readJSON(pKey(p.id), {}); });
   return data;
 }
-function restoreBackup(b) {
-  if (b && b.v === 2) {
-    writeJSON('eb.profiles', b.profiles); writeJSON('eb.shared', b.shared);
-    Object.entries(b.own).forEach(([id, v]) => writeJSON(pKey(id), v));
-    P = b.profiles;
-  } else if (b && typeof b === 'object') { // alte Sicherungsdatei (Version 1)
-    S = Object.assign({}, defaults, b); save(); return;
-  } else throw new Error('ungültig');
+// Sicherungsdatei prüfen: nur Sicherungen dieser App, Werte mit falschem Typ werden verworfen
+const validProfiles = x => x && Array.isArray(x.list) && x.list.length > 0 && x.list.every(p => p && /^p[0-9a-z]{1,20}$/.test(p.id) && typeof p.name === 'string') && x.list.some(p => p.id === x.active);
+function checkBackup(b) {
+  if (!b || kind(b) !== 'object') return null;
+  if (b.v === 2) {
+    if (!validProfiles(b.profiles) || kind(b.shared) !== 'object' || kind(b.own) !== 'object') return null;
+    const profiles = { active: b.profiles.active, list: b.profiles.list.map(p => ({ id: p.id, name: p.name.slice(0, 60) })) };
+    const own = {}; profiles.list.forEach(p => { own[p.id] = clean(b.own[p.id]); });
+    return { v: 2, profiles, shared: clean(b.shared), own };
+  }
+  // alte Sicherungsdatei (Version 1): ein einzelner Lernstand
+  const st = clean(b);
+  return ['srs', 'exams', 'kurs', 'docs', 'vok'].some(k => k in st) ? { v: 1, st } : null;
+}
+function restoreBackup(raw) {
+  const b = checkBackup(raw); if (!b) throw new Error('ungültig');
+  if (b.v === 1) { S = Object.assign(fresh(), b.st); S.onboarded = true; save(); return; }
+  // Profile, die es in der Sicherung nicht gibt, entfernen
+  P.list.filter(p => !b.profiles.list.some(q => q.id === p.id)).forEach(p => { try { localStorage.removeItem(pKey(p.id)); } catch {} idbDel(pKey(p.id)); });
+  writeJSON('eb.profiles', b.profiles); writeJSON('eb.shared', b.shared);
+  Object.entries(b.own).forEach(([id, v]) => writeJSON(pKey(id), v));
+  P = b.profiles;
   S = load();
 }
 addEventListener('pagehide', () => save());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') save(); });
 addEventListener('storage', e => { if (e.key && e.key.startsWith('eb.')) { P = readJSON('eb.profiles', P); S = load(); } });
 let P = readJSON('eb.profiles', null);
-if (!P) { P = { active: 'p1', list: [{ id: 'p1', name: '' }] }; writeJSON('eb.profiles', P, true); }
+if (!validProfiles(P)) { P = { active: 'p1', list: [{ id: 'p1', name: '' }] }; writeJSON('eb.profiles', P, true); }
 const pKey = id => id === 'p1' ? KEY : `${KEY}.${id}`;
 let S = load();
 function load() {
-  const own = readJSON(pKey(P.active), {});
+  const own = clean(readJSON(pKey(P.active), {}));
   let shared = readJSON('eb.shared', null);
   if (!shared) { shared = {}; const first = readJSON(KEY, {}); SHARED.forEach(k => { if (k in first) shared[k] = first[k]; }); writeJSON('eb.shared', shared, true); }
-  const st = Object.assign({}, defaults, own, shared);
-  // Umstieg von „Russisch an/aus“ (bis 1.3) auf die Sprachwahl; wer schon gelernt hat, kennt die App bereits
-  if (!st.lang && ('ru' in shared)) { st.lang = shared.ru === false ? 'de' : 'ru'; }
+  const legacy = kind(shared) === 'object' && !('lang' in shared) && ('ru' in shared);
+  shared = clean(shared);
+  const st = Object.assign(fresh(), own, shared);
+  // Umstieg von „Russisch an/aus“ (bis 1.3) auf die Sprachwahl; wer die App schon benutzt hat, braucht keinen Erststart
+  if (legacy) { st.lang = shared.ru === false ? 'de' : 'ru'; st.onboarded = true; }
+  if (!LANG_CODES.includes(st.lang)) st.lang = '';
   return st;
 }
 function save() {
@@ -103,9 +152,9 @@ function switchProfile(id) { save(); P.active = id; writeJSON('eb.profiles', P);
 const dayKey = (t = Date.now()) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 function activity(n = 1) { const k = dayKey(); S.daily[k] = (S.daily[k] || 0) + n; save(); }
 function streak() {
-  let n = 0, t = Date.now();
-  if (!S.daily[dayKey(t)]) t -= DAY; // heute noch nicht gelernt: Serie zählt bis gestern
-  while (S.daily[dayKey(t)]) { n++; t -= DAY; }
+  let n = 0; const d = new Date();
+  if (!S.daily[dayKey(d.getTime())]) d.setDate(d.getDate() - 1); // heute noch nicht gelernt: Serie zählt bis gestern
+  while (S.daily[dayKey(d.getTime())]) { n++; d.setDate(d.getDate() - 1); }
   return n;
 }
 function dailyGoal() { const p = typeof planData === 'function' && S.testdate ? planData() : null; return Math.max(10, Math.min(40, p && p.tDays > 0 ? p.qPerDay + 5 : 20)); }
@@ -127,7 +176,7 @@ async function boot() {
   D.general = D.q.filter(q => q.id.startsWith('g'));
   D.state = D.q.filter(q => q.id.startsWith('SN'));
   D.vok = D.kurs.flatMap(l => l.vok.map(v => ({ id: l.id + ':' + v[0], de: v[0], ru: v[1], lv: l.lv, lesson: l.id })));
-  if (S.lang === 'en') await loadEN();
+  if (hl() && hl() !== 'ru' && !(await loadDict(hl()))) S.lang = 'ru'; // offline ohne Wörterbuch: Russisch statt leerer Texte
   applyPrefs();
   window.addEventListener('hashchange', route);
   route();
@@ -160,35 +209,42 @@ function applyPrefs() {
    Hilfssprachen-Texte stehen in den Daten auf Russisch; data/en.json ordnet jedem russischen Text die englische Fassung zu. */
 const LANG = {
   de: { bcp: 'de-DE', tag: 'DE', name: 'Nur Deutsch', de: 'Deutsch', adj: 'deutsche', read: 'Vorlesen', page: 'Seite auf Deutsch vorlesen' },
-  ru: { bcp: 'ru-RU', tag: 'RU', name: 'Русский', de: 'Russisch', adj: 'russische', read: 'Прочитать по-русски', page: 'Прочитать страницу по-русски' },
-  en: { bcp: 'en-GB', tag: 'EN', name: 'English', de: 'Englisch', adj: 'englische', read: 'Read aloud in English', page: 'Read this page in English' }
+  ru: { bcp: 'ru-RU', tag: 'RU', name: 'Русский', de: 'Russisch', adj: 'russische', read: 'Прочитать по-русски', page: 'Прочитать страницу по-русски', also: 'Пояснения дополнительно на русском' },
+  en: { bcp: 'en-GB', tag: 'EN', name: 'English', de: 'Englisch', adj: 'englische', read: 'Read aloud in English', page: 'Read this page in English', also: 'Explanations also in English' },
+  tr: { bcp: 'tr-TR', tag: 'TR', name: 'Türkçe', de: 'Türkisch', adj: 'türkische', read: 'Türkçe sesli oku', page: 'Sayfayı Türkçe oku', also: 'Açıklamalar ayrıca Türkçe', ai: 'Otomatik çeviri – geçerli olan Almanca metindir.' },
+  ar: { bcp: 'ar-SA', tag: 'AR', name: 'العربية', de: 'Arabisch', adj: 'arabische', read: 'اقرأ بالعربية', page: 'اقرأ الصفحة بالعربية', also: 'الشروح أيضًا بالعربية', rtl: true, ai: 'ترجمة آلية – النص الألماني هو المعتمد.' },
+  pl: { bcp: 'pl-PL', tag: 'PL', name: 'Polski', de: 'Polnisch', adj: 'polnische', read: 'Przeczytaj po polsku', page: 'Przeczytaj stronę po polsku', also: 'Wyjaśnienia także po polsku', ai: 'Tłumaczenie automatyczne – obowiązuje tekst niemiecki.' },
+  ro: { bcp: 'ro-RO', tag: 'RO', name: 'Română', de: 'Rumänisch', adj: 'rumänische', read: 'Citește cu voce tare în română', page: 'Citește pagina în română', also: 'Explicații și în limba română', ai: 'Traducere automată – textul german este cel valabil.' }
 };
-const hl = () => (S.lang === 'ru' || S.lang === 'en') ? S.lang : (S.lang === 'de' ? null : 'ru');
-const hlName = () => hl() ? LANG[hl()].de : 'Deutsch'; // „Russisch“ / „Englisch“
+const HL = ['ru', 'en', 'tr', 'ar', 'pl', 'ro']; // Hilfssprachen, Reihenfolge in der Auswahl
+const hl = () => HL.includes(S.lang) ? S.lang : (S.lang === 'de' ? null : 'ru');
+const hlName = () => hl() ? LANG[hl()].de : 'Deutsch'; // „Russisch“ / „Englisch“ …
+const dirAttr = l => LANG[l]?.rtl ? ' dir="rtl"' : '';
 const CYR = /[Ѐ-ӿ]/;
-let EN = null;
-async function loadEN() {
-  if (EN) return true;
-  try { EN = await fetch('data/en.json').then(r => r.json()); return true; } catch { EN = null; return false; }
+// Wörterbücher: russischer Quelltext → Hilfssprache (data/<code>.json)
+const DICT = {};
+async function loadDict(l) {
+  if (l === 'ru' || DICT[l]) return true;
+  try { const r = await fetch(`data/${l}.json`); if (!r.ok) throw 0; DICT[l] = await r.json(); return true; } catch { return false; }
 }
 // russischen Quelltext in die gewählte Hilfssprache bringen
 function tr(t) {
   if (!t) return '';
-  if (hl() !== 'en') return t;
-  const e = EN && EN[t];
+  const l = hl(); if (!l || l === 'ru') return t;
+  const e = DICT[l]?.[t];
   return e != null ? e : (CYR.test(t) ? '' : t);
 }
 async function setLang(l) {
-  if (l === 'en' && !(await loadEN())) { toast('Englisch konnte nicht geladen werden – bitte mit Internet erneut versuchen.'); return false; }
+  if (l !== 'de' && !(await loadDict(l))) { toast(`${LANG[l].de} konnte nicht geladen werden – bitte mit Internet erneut versuchen.`); return false; }
   S.lang = l; S.ru = l !== 'de'; save(); applyPrefs(); readerBar();
   return true;
 }
 const SAY_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 010 6"/></svg>';
 // kleiner Vorlese-Knopf als <span>, damit er auch in Antwort-Buttons stehen darf
-// lang 'hl' = die gewählte Hilfssprache (Russisch oder Englisch)
+// lang 'hl' = die gewählte Hilfssprache
 const say = (text, lang = 'de') => { if (lang === 'hl') lang = hl(); if (!text || !lang) return ''; const L = LANG[lang]; return `<span class="say" role="button" tabindex="0" data-say="${lang}" data-t="${esc(text)}" aria-label="${lang === 'de' ? 'Vorlesen' : esc(L.read)}">${SAY_ICON}${lang === 'de' ? '' : `<small>${L.tag}</small>`}</span>`; };
-// Text in der Hilfssprache (Quelle: russischer Text, Englisch kommt aus data/en.json); bei „Nur Deutsch“ leer
-const ruRaw = x => x && hl() ? `<span class="ru" lang="${hl()}">${esc(x)} ${say(x, 'hl')}</span>` : '';
+// Text in der Hilfssprache (Quelle: russischer Text, andere Sprachen aus data/<code>.json); bei „Nur Deutsch“ leer
+const ruRaw = x => x && hl() ? `<span class="ru" lang="${hl()}"${dirAttr(hl())}>${esc(x)} ${say(x, 'hl')}</span>` : '';
 const ru = t => ruRaw(tr(t));
 const speakIcon = '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11"/></svg>';
 function speakBtn(text) { return `<button class="speak" data-act="speak" data-t="${esc(text)}" aria-label="Vorlesen">${speakIcon}</button>`; }
@@ -241,7 +297,8 @@ document.addEventListener('click', e => {
   e.preventDefault(); e.stopPropagation();
   if (s.dataset.mic) listen(s.dataset.mic, s); else speak(s.dataset.t, s.dataset.say);
 }, true);
-document.addEventListener('keydown', e => { const s = e.target.closest?.('.say'); if (s && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); s.click(); } });
+// Elemente mit role="button", die kein <button> sind (Vorlesen, Karteikarte): mit Enter/Leertaste bedienbar
+document.addEventListener('keydown', e => { const s = e.target.closest?.('[role="button"]:not(button)'); if (s && !s.classList.contains('term') && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); s.click(); } });
 
 // Ganze Seite vorlesen (Deutsch oder Hilfssprache)
 function pageText(lang) {
@@ -281,7 +338,8 @@ let cleanup = null;
 function route() {
   if (cleanup) { cleanup(); cleanup = null; }
   if ('speechSynthesis' in window) speechSynthesis.cancel();
-  const parts = (decodeURIComponent(location.hash).replace(/^#\/?/, '') || 'start').split(/--|\//);
+  let h = location.hash; try { h = decodeURIComponent(h); } catch {}
+  const parts = (h.replace(/^#\/?/, '') || 'start').split(/--|\//);
   const [p, a, b] = parts;
   const parent = { lernen: 'test', pruefung: 'test', katalog: 'test', audio: 'test', glossar: 'test', lektion: 'kurs', vokabeln: 'kurs', dtz: 'kurs' }[p];
   // Erststart: erst Sprache, dann Einführung
@@ -290,16 +348,20 @@ function route() {
   const extra = ['check', 'plan', 'lebenslauf', 'kosten', 'fristen', 'termine', 'briefe', 'installieren', 'profil', 'einstellungen', 'gespraech', 'waehlen', 'teilen', 'sprache', 'tutorial'].includes(p);
   document.querySelectorAll('[data-nav]').forEach(n => n.classList.toggle('active', n.dataset.nav === p || n.dataset.nav === parent || (extra && n.dataset.nav === 'mehr' && innerWidth < 900)));
   const views = { start, test, lernen, pruefung, katalog, kurs, lektion, vokabeln, dtz, docs, amt, check, briefe, einstellungen, mehr, plan, lebenslauf, kosten, fristen, installieren, audio, termine, glossar, profil, gespraech, waehlen, teilen, sprache, tutorial };
+  BACK = extra && !['sprache', 'tutorial'].includes(p) || (p === 'sprache' && S.onboarded) ? `<a class="back no-print only-mobile" href="#mehr">‹ Mehr</a>` : '';
   (views[p] || start)(a, b);
+  // Seitentitel für Verlauf und Screenreader
+  const h1 = $app.querySelector('h1'); document.title = h1 && p !== 'start' ? `${h1.textContent.trim()} · Einbürgerung Sachsen` : 'Einbürgerung Sachsen';
   closePop(); stopSpeak(); document.querySelector('#reader [data-read="stop"]')?.setAttribute('hidden', '');
   window.scrollTo(0, 0);
   $app.focus({ preventScroll: true });
 }
-const render = html => { $app.innerHTML = `<div class="wrap">${html}</div>`; };
+let BACK = ''; // Zurück zu „Mehr“ auf dem Handy, wenn die Seite keinen eigenen Zurück-Link hat
+const render = html => { $app.innerHTML = `<div class="wrap">${BACK && !/^\s*<a class="back/.test(html) ? BACK : ''}${html}</div>`; };
 
 /* ---------- Start ---------- */
 function stepDone(id) {
-  const docsItems = D.info.docs.flatMap(g => g.items);
+  const docsItems = visibleDocs().flatMap(g => g.items);
   switch (id) {
     case 's1': return Object.keys(S.check).length >= D.info.check.length;
     case 's2': return D.kurs.filter(l => S.kurs[l.id]?.done).length === D.kurs.length;
@@ -310,29 +372,30 @@ function stepDone(id) {
   }
 }
 
+const MEHR = [
+  ['Lernen', 'Учёба', [['vokabeln', 'Vokabeltrainer', 'Тренажёр слов', 'Alle Wörter aus dem Kurs mit Sprachausgabe'],
+    ['dtz', 'B1-Prüfung (DTZ)', 'Экзамен B1 (DTZ)', 'Hören, Lesen, Schreiben und Sprechen üben'],
+    ['plan', 'Mein Lernplan', 'Мой план обучения', 'Tagesziele bis zum Prüfungstermin, mit Erinnerung'],
+    ['audio', 'Audio-Modus', 'Аудиорежим', 'Fragen vorlesen lassen – für unterwegs'],
+    ['glossar', 'Wörterbuch', 'Словарь', 'Schwierige Begriffe einfach erklärt'],
+    ['gespraech', 'Gespräch bei der Behörde üben', 'Подготовка к беседе в ведомстве', 'Typische Fragen, Musterantworten, das Bekenntnis erklärt']]],
+  ['Antrag & Unterlagen', 'Заявление и документы', [['check', 'Voraussetzungs-Check', 'Проверка условий', 'Erfülle ich die Bedingungen? Ab wann darf ich?'],
+    ['lebenslauf', 'Lebenslauf-Generator', 'Генератор автобиографии', 'Ausführlicher Lebenslauf als Text für den Antrag'],
+    ['kosten', 'Kostenrechner', 'Калькулятор расходов', 'Was die Einbürgerung für deine Familie kostet'],
+    ['fristen', 'Ablaufdaten', 'Сроки документов', 'Warnung, bevor Pass oder Aufenthaltstitel ablaufen'],
+    ['termine', 'Was mitbringen?', 'Что взять с собой?', 'Listen für Test, B1-Prüfung und Behördentermin'],
+    ['briefe', 'Briefvorlagen', 'Шаблоны писем', 'An die Behörde schreiben – zum Kopieren']]],
+  ['Nach der Einbürgerung', 'После натурализации', [['waehlen', 'Mein erstes Mal wählen', 'Мои первые выборы', 'Wahlen in Sachsen einfach erklärt – mit Quiz']]],
+  ['App', 'Приложение', [['sprache', 'Sprache ändern', 'Изменить язык', () => `Jetzt: ${hl() ? 'Deutsch + ' + LANG[hl()].de : 'Nur Deutsch'}`],
+    ['tutorial', 'Einführung ansehen', 'Посмотреть введение', 'Kurze Tour durch die App – jederzeit wiederholbar'],
+    ['profil', 'Familienmodus', 'Семейный режим', 'Mehrere Personen auf einem Gerät'],
+    ['installieren', 'Als App installieren', 'Установить как приложение', 'Anleitung für iPhone, iPad und Android'],
+    ['teilen', 'App weiterempfehlen', 'Порекомендовать приложение', 'Per WhatsApp, Telegram oder QR-Code'],
+    ['einstellungen', 'Einstellungen & Infos', 'Настройки и информация', 'Sprache, Schriftgröße, Sicherung, Quellen']]]
+];
 function mehr() {
-  render(`<h1>Mehr</h1><div class="grid">
-    ${[['check', 'Voraussetzungs-Check', 'Проверка условий', 'Erfülle ich die Bedingungen? Ab wann darf ich?'],
-       ['vokabeln', 'Vokabeltrainer', 'Тренажёр слов', 'Alle Wörter aus dem Kurs mit Sprachausgabe'],
-       ['dtz', 'B1-Prüfung (DTZ)', 'Экзамен B1 (DTZ)', 'Hören, Lesen, Schreiben und Sprechen üben'],
-       ['plan', 'Mein Lernplan', 'Мой план обучения', 'Tagesziele bis zum Prüfungstermin, mit Erinnerung'],
-       ['lebenslauf', 'Lebenslauf-Generator', 'Генератор автобиографии', 'Ausführlicher Lebenslauf als Text für den Antrag'],
-       ['kosten', 'Kostenrechner', 'Калькулятор расходов', 'Was die Einbürgerung für deine Familie kostet'],
-       ['fristen', 'Ablaufdaten', 'Сроки документов', 'Warnung, bevor Pass oder Aufenthaltstitel ablaufen'],
-       ['termine', 'Was mitbringen?', 'Что взять с собой?', 'Listen für Test, B1-Prüfung und Behördentermin'],
-       ['audio', 'Audio-Modus', 'Аудиорежим', 'Fragen vorlesen lassen – für unterwegs'],
-       ['glossar', 'Wörterbuch', 'Словарь', 'Schwierige Begriffe einfach erklärt'],
-       ['profil', 'Familienmodus', 'Семейный режим', 'Mehrere Personen auf einem Gerät'],
-       ['gespraech', 'Gespräch bei der Behörde üben', 'Подготовка к беседе в ведомстве', 'Typische Fragen, Musterantworten, das Bekenntnis erklärt'],
-       ['waehlen', 'Mein erstes Mal wählen', 'Мои первые выборы', 'Wahlen in Sachsen einfach erklärt – mit Quiz'],
-       ['teilen', 'App weiterempfehlen', 'Порекомендовать приложение', 'Per WhatsApp, Telegram oder QR-Code'],
-       ['briefe', 'Briefvorlagen', 'Шаблоны писем', 'An die Behörde schreiben – zum Kopieren'],
-       ['installieren', 'Als App installieren', 'Установить как приложение', 'Anleitung für iPhone, iPad und Android'],
-       ['sprache', 'Sprache ändern', 'Изменить язык', `Jetzt: ${hl() ? 'Deutsch + ' + LANG[hl()].de : 'Nur Deutsch'}`],
-       ['tutorial', 'Einführung ansehen', 'Посмотреть введение', 'Kurze Tour durch die App – jederzeit wiederholbar'],
-       ['einstellungen', 'Einstellungen & Infos', 'Настройки и информация', 'Sprache, Schriftgröße, Sicherung, Quellen']]
-      .map(([h, t, r, d]) => `<a class="tile" href="#${h}"><h3>${t}</h3>${ru(r)}<div class="meta">${d}</div><span class="arrow">›</span></a>`).join('')}
-  </div>`);
+  render(`<h1>Mehr</h1>${MEHR.map(([g, gr, items]) => `<h2 class="group-h">${g}${ru(gr)}</h2><div class="grid two">
+    ${items.map(([h, t, r, d]) => `<a class="tile compact" href="#${h}"><h3>${t}</h3>${ru(r)}<div class="meta">${typeof d === 'function' ? d() : d}</div><span class="arrow" aria-hidden="true">›</span></a>`).join('')}</div>`).join('')}`);
 }
 
 /* ---------- Einbürgerungstest ---------- */
@@ -366,13 +429,13 @@ function qCard(q, { idx, total, sel = null, reveal = false, mode = '' } = {}) {
   return `
     <div class="card">
       <div class="q-head"><span>${q.id.startsWith('SN') ? 'Sachsen' : 'Frage'} ${q.n}${q.t && q.t !== 'Sachsen' ? ' · ' + esc(q.t) : ''}</span>${idx != null ? `<span>${idx + 1} / ${total}</span>` : ''}</div>
-      <div class="q-text">${gloss(esc(q.q))} ${say(q.q + ' … ' + q.o.map((o, i) => ABC[i] + ': ' + o).join('. '))}${tr(q.ru) && hl() ? `<span class="ru" lang="${hl()}">${esc(tr(q.ru))} ${say(tr(q.ru) + ' … ' + (q.ruo || []).map((o, i) => ABC[i] + ': ' + tr(o)).join('. '), 'hl')}</span>` : ''}</div>
+      <div class="q-text">${gloss(esc(q.q))} ${say(q.q + ' … ' + q.o.map((o, i) => ABC[i] + ': ' + o).join('. '))}${tr(q.ru) && hl() ? `<span class="ru" lang="${hl()}"${dirAttr(hl())}>${esc(tr(q.ru))} ${say(tr(q.ru) + ' … ' + (q.ruo || []).map((o, i) => ABC[i] + ': ' + tr(o)).join('. '), 'hl')}</span>` : ''}</div>
       ${q.img ? `<img class="q-img" src="${q.img}" alt="Abbildung zu Frage ${esc(q.n)}" loading="lazy">` : ''}
       <div class="opts">${q.o.map((o, i) => {
         let cls = '';
         if (reveal) { if (i === q.a) cls = 'right'; else if (i === sel) cls = 'wrong'; }
         else if (i === sel) cls = 'sel';
-        return `<button class="opt ${cls}" data-act="${mode}" data-i="${i}" ${reveal && mode !== 'exam' ? 'disabled' : ''}><span class="k">${ABC[i]}</span><span>${gloss(esc(o))}${ruOpts[i] && tr(ruOpts[i]) !== o ? ru(ruOpts[i]) : ''}</span></button>`;
+        return `<button class="opt ${cls}" data-act="${mode}" data-i="${i}" ${reveal && mode !== 'exam' ? 'disabled' : ''} ${mode === 'exam' ? `aria-pressed="${i === sel}"` : ''}><span class="k">${ABC[i]}</span><span>${gloss(esc(o))}${ruOpts[i] && tr(ruOpts[i]) !== o ? ru(ruOpts[i]) : ''}</span></button>`;
       }).join('')}</div>
       ${reveal && q.e ? `<div class="why"><b>WARUM?</b>${esc(q.e[0])} ${say(q.e[0])}${ru(q.e[1])}</div>` : ''}
     </div>`;
@@ -400,9 +463,17 @@ function lernen(filter, arg) {
     render(`${back('#test', 'Test')}
       ${queue.length <= 40 ? `<div class="segs" aria-label="Fortschritt ${i + 1} von ${queue.length}">${queue.map((_, k) => `<i class="${k < i ? 'd' : ''}"></i>`).join('')}</div>` : `<div style="margin-bottom:12px">${bar(pct(i, queue.length))}</div>`}
       ${qCard(q, { sel, reveal: revealed, mode: 'learn' })}
-      ${revealed ? `<div class="feedback ${sel === q.a ? 'ok' : 'bad'}">${sel === q.a ? 'Richtig!' : 'Leider falsch. Richtig ist ' + ABC[q.a] + '.'}${ruRaw(sel === q.a ? tr('Правильно!') : tr('К сожалению, неверно. Правильный ответ: ') + ABC[q.a] + '.')}</div>
-        <div class="row end" style="margin-top:14px"><button class="btn primary" data-act="next">Weiter</button></div>` : ''}`);
+      <div aria-live="polite">${revealed ? `<div class="feedback ${sel === q.a ? 'ok' : 'bad'}">${sel === q.a ? '✓ Richtig!' : '✗ Leider falsch. Richtig ist ' + ABC[q.a] + '.'}${ruRaw(sel === q.a ? tr('Правильно!') : tr('К сожалению, неверно. Правильный ответ: ') + ABC[q.a] + '.')}</div>` : ''}</div>
+      ${revealed ? `<div class="row end sticky-next"><button class="btn primary" data-act="next">${i + 1 < queue.length ? 'Weiter ›' : 'Runde beenden'}</button></div>` : '<p class="kbd-hint">Tastatur: 1–4 oder A–D wählen, Enter für Weiter</p>'}`);
+    if (revealed) $app.querySelector('[data-act="next"]')?.focus({ preventScroll: true });
   }
+  const keys = e => {
+    if (e.target.closest('input, textarea, select') || e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = '1234abcd'.indexOf(e.key.toLowerCase());
+    if (k >= 0) { $app.querySelector(`.opt[data-act="learn"][data-i="${k % 4}"]:not([disabled])`)?.click(); }
+    else if (e.key === 'Enter' && !e.target.closest('button, a')) $app.querySelector('[data-act="next"]')?.click();
+  };
+  document.addEventListener('keydown', keys);
   $app.onclick = e => {
     const t = e.target.closest('[data-act]'); if (!t) return;
     if (t.dataset.act === 'learn') {
@@ -420,7 +491,7 @@ function lernen(filter, arg) {
       } else show();
     } else if (t.dataset.act === 'speak') speak(t.dataset.t);
   };
-  cleanup = () => { $app.onclick = null; };
+  cleanup = () => { $app.onclick = null; document.removeEventListener('keydown', keys); };
   show();
 }
 
@@ -439,14 +510,24 @@ function pruefung() {
   function show() {
     render(`
       <div class="exam-bar">
-        <div class="row"><a class="back" href="#test" style="margin:0">‹ Abbrechen</a><span class="spacer"></span><span class="badge brand">⏱ <span id="timer">60:00</span></span><span class="badge">${ans.filter(a => a !== null).length}/33 beantwortet</span></div>
-        <div class="dots">${qs.map((_, k) => `<button data-act="jump" data-i="${k}" class="${ans[k] !== null ? 'done' : ''} ${k === i ? 'cur' : ''}" aria-label="Frage ${k + 1}">${k + 1}</button>`).join('')}</div>
+        <div class="row"><button class="back" data-act="quit" style="margin:0;border:0;background:none;cursor:pointer;padding:0">‹ Abbrechen</button><span class="spacer"></span><span class="badge brand">⏱ <span id="timer">60:00</span></span><span class="badge">${ans.filter(a => a !== null).length}/33 beantwortet</span></div>
+        <div class="dots" role="navigation" aria-label="Fragen">${qs.map((_, k) => `<button data-act="jump" data-i="${k}" class="${ans[k] !== null ? 'done' : 'open'} ${k === i ? 'cur' : ''}" aria-label="Frage ${k + 1}${ans[k] !== null ? ', beantwortet' : ', offen'}" ${k === i ? 'aria-current="step"' : ''}>${k + 1}</button>`).join('')}</div>
+        <div id="quitbox"></div>
       </div>
       ${qCard(qs[i], { idx: i, total: 33, sel: ans[i], mode: 'exam' })}
       <div class="row"><button class="btn" data-act="prev" ${i === 0 ? 'disabled' : ''}>‹ Zurück</button><span class="spacer"></span>
-        ${i < 32 ? `<button class="btn primary" data-act="fwd">Weiter ›</button>` : ''}<button class="btn ${i === 32 ? 'primary' : ''}" data-act="finish">Abgeben</button></div>`);
+        ${i < 32 ? `<button class="btn primary" data-act="fwd">Weiter ›</button>` : ''}<button class="btn ${i === 32 ? 'primary' : ''}" data-act="finish">Abgeben</button></div>
+      <p class="kbd-hint">Tastatur: 1–4 oder A–D wählen, ← → blättern</p>`);
     tick();
   }
+  const keys = e => {
+    if (done || e.target.closest('input, textarea, select') || e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = '1234abcd'.indexOf(e.key.toLowerCase());
+    if (k >= 0) { ans[i] = k % 4; show(); }
+    else if (e.key === 'ArrowRight' && i < 32) { i++; show(); }
+    else if (e.key === 'ArrowLeft' && i > 0) { i--; show(); }
+  };
+  document.addEventListener('keydown', keys);
   function finish() {
     if (done) return; done = true; clearInterval(timer);
     const score = qs.filter((q, k) => ans[k] === q.a).length;
@@ -465,6 +546,12 @@ function pruefung() {
     const t = e.target.closest('[data-act]'); if (!t) return;
     const a = t.dataset.act;
     if (done) { if (a === 'again') pruefung(); if (a === 'bild') erfolgsbild(qs.filter((q, k) => ans[k] === q.a).length); return; }
+    if (a === 'quit') {
+      if (!ans.some(x => x !== null)) { location.hash = '#test'; return; }
+      document.getElementById('quitbox').innerHTML = `<div class="notice" role="alert" style="margin:10px 0 0"><b>Simulation abbrechen?</b> Deine Antworten werden nicht gewertet.${ru('Прервать пробный экзамен? Ответы не будут засчитаны.')}<div class="row" style="margin-top:8px"><a class="btn small" href="#test">Ja, abbrechen</a><button class="btn small primary" data-act="stay">Weiter üben</button></div></div>`;
+      return;
+    }
+    if (a === 'stay') { document.getElementById('quitbox').innerHTML = ''; return; }
     if (a === 'exam') { ans[i] = +t.dataset.i; show(); }
     else if (a === 'jump') { i = +t.dataset.i; show(); }
     else if (a === 'prev') { i--; show(); }
@@ -474,7 +561,7 @@ function pruefung() {
       if (!open || t.dataset.sure) finish(); else { t.textContent = `${open} offen – trotzdem abgeben?`; t.dataset.sure = '1'; t.classList.add('primary'); }
     }
   };
-  cleanup = () => { clearInterval(timer); $app.onclick = null; };
+  cleanup = () => { clearInterval(timer); $app.onclick = null; document.removeEventListener('keydown', keys); };
   show();
 }
 
@@ -620,14 +707,14 @@ function vokabeln(lessonId) {
     const v = pool[i], tv = H ? tr(v.ru) : '';
     // „Nur Deutsch“: Karte zeigt das Wort, Rückseite übt Aussprache und Bedeutung selbst einschätzen
     if (!H || !tv) dir = 'de';
-    const front = dir === 'de' ? `<div>${esc(v.de)}</div>` : `<div lang="${H}">${esc(tv)}</div>`;
+    const front = dir === 'de' ? `<div>${esc(v.de)}</div>` : `<div lang="${H}"${dirAttr(H)}>${esc(tv)}</div>`;
     const backSide = !flipped ? '<div class="small muted">Antippen zum Umdrehen</div>'
-      : dir === 'de' ? (tv ? `<div class="ru" lang="${H}" style="display:block">${esc(tv)}</div>` : '<div class="small muted">Weißt du, was das Wort bedeutet? Sprich es laut nach.</div>')
+      : dir === 'de' ? (tv ? `<div class="ru" lang="${H}"${dirAttr(H)} style="display:block">${esc(tv)}</div>` : '<div class="small muted">Weißt du, was das Wort bedeutet? Sprich es laut nach.</div>')
       : `<div style="color:var(--brand)">${esc(v.de)}</div>`;
     render(`${back(lessonId ? '#lektion--' + lessonId + '--vok' : '#kurs', 'Zurück')}<h1>Vokabeltrainer</h1>
       ${H ? `<div class="chips"><button class="chip ${dir === 'de' ? 'on' : ''}" data-dir="de">Deutsch → ${hlName()}</button><button class="chip ${dir !== 'de' ? 'on' : ''}" data-dir="${H}">${hlName()} → Deutsch</button></div>` : ''}
       <div class="row" style="margin-bottom:10px"><div style="flex:1">${bar(pct(i, pool.length))}</div><span class="small muted">${i + 1}/${pool.length}</span></div>
-      <div class="card flash" data-act="flip" role="button" aria-label="Karte umdrehen">
+      <div class="card flash" data-act="flip" role="button" tabindex="0" aria-label="Karte umdrehen">
         ${front}
         ${backSide}
       </div>
@@ -638,7 +725,7 @@ function vokabeln(lessonId) {
     const t = e.target.closest('[data-act],[data-dir]'); if (!t) return;
     if (t.dataset.dir) { dir = t.dataset.dir; flipped = false; return show(); }
     const a = t.dataset.act;
-    if (a === 'flip') { flipped = !flipped; if (flipped && dir !== 'de') speak(pool[i].de); show(); }
+    if (a === 'flip') { flipped = !flipped; if (flipped && dir !== 'de') speak(pool[i].de); show(); $app.querySelector(flipped ? '[data-act="yes"]' : '.flash')?.focus({ preventScroll: true }); }
     else if (a === 'speak') speak(t.dataset.t);
     else if (a === 'yes' || a === 'no') {
       srsGrade(S.vok, pool[i].id, a === 'yes'); activity();
@@ -655,18 +742,22 @@ function vokabeln(lessonId) {
 /* ---------- B1 / DTZ ---------- */
 function dtz(part, id) {
   if (part === 'schreiben' && id) {
-    const w = D.dtz.schreiben.find(x => x.id === id);
-    const key = 'eb.draft.' + id; let draft = ''; try { draft = localStorage.getItem(key) || ''; } catch {}
+    const w = D.dtz.schreiben.find(x => x.id === id); if (!w) return dtz();
+    // Entwürfe gehören zum Profil (und damit in die Sicherung); alte Ablage eb.draft.* einmalig übernehmen
+    if (S.drafts[id] == null) { try { const old = localStorage.getItem('eb.draft.' + id); if (old) { S.drafts[id] = old; save(); localStorage.removeItem('eb.draft.' + id); } } catch {} }
+    const draft = S.drafts[id] || '';
     render(`${back('#dtz', 'B1-Prüfung')}<h1>${esc(w.t)}</h1>${ru(w.ru)}
       <div class="card"><p>${esc(w.sit)}</p><p class="small muted">Schreiben Sie zu allen vier Punkten (ca. 30 Minuten):</p><ul>${w.p.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div>
       <label class="lbl" for="txt">Dein Text</label><textarea id="txt" class="text" spellcheck="true" lang="de">${esc(draft)}</textarea>
       <div class="row" style="margin:10px 0 18px"><span class="small muted" id="wc"></span><span class="spacer"></span><button class="btn" data-act="muster">Musterlösung zeigen</button></div>
       <div id="muster"></div>`);
     const ta = document.getElementById('txt'), wc = document.getElementById('wc');
-    const upd = () => { wc.textContent = `${(ta.value.match(/\S+/g) || []).length} Wörter (Ziel: ca. 80–120)`; try { localStorage.setItem(key, ta.value); } catch {} };
-    ta.oninput = upd; upd();
+    let st = null;
+    const count = () => { wc.textContent = `${(ta.value.match(/\S+/g) || []).length} Wörter (Ziel: ca. 80–120)`; };
+    ta.oninput = () => { count(); S.drafts[id] = ta.value; clearTimeout(st); st = setTimeout(save, 500); };
+    count();
     $app.onclick = e => { if (e.target.closest('[data-act="muster"]')) document.getElementById('muster').innerHTML = `<h2>Musterlösung</h2><pre class="letter">${esc(w.muster)}</pre><div class="notice ok">Prüfe deinen Text: Anrede? Alle 4 Punkte? Konnektoren (deshalb, außerdem …)? Schluss und Gruß?</div>`; };
-    cleanup = () => { $app.onclick = null; };
+    cleanup = () => { $app.onclick = null; clearTimeout(st); save(); };
     return;
   }
   if ((part === 'hoeren' || part === 'lesen') && id) return dtzAufgabe(part, id);
@@ -887,9 +978,10 @@ function start() {
     </div>
     ${fristWarnings()}
     ${backupDue ? `<div class="notice">Sichere deinen Fortschritt ab und zu als Datei – z. B. für einen Handywechsel.<div class="row" style="margin-top:8px"><button class="btn small" data-act="backup">Sicherung herunterladen</button></div></div>` : ''}
+    ${(() => { const k = D.info.steps.findIndex(s => !stepDone(s.id)); if (k < 0) return ''; const s = D.info.steps[k];
+      return `<a class="next" href="#${s.go || 'start'}"><span class="n" aria-hidden="true">${k + 1}</span><span class="b"><span class="eyebrow">Nächster Schritt · ${k + 1}/${D.info.steps.length}</span><b>${esc(s.t)}</b>${ru(s.ru)}</span><span class="go" aria-hidden="true">›</span></a>`; })()}
     <details class="level"><summary><span class="lv">Schritt für Schritt</span><span class="badge">${D.info.steps.filter(s => stepDone(s.id)).length}/${D.info.steps.length}</span><span class="spacer"></span><span class="chev">›</span></summary>
       <ol class="steps" style="margin-top:14px">${D.info.steps.map(s => `<li class="${stepDone(s.id) ? 'done' : ''}"><b>${esc(s.t)}</b>${ru(s.ru)}<div class="small" style="margin-top:4px">${esc(s.d)}</div>${ru(s.dru)}${s.go ? `<a class="btn small" style="margin-top:8px" href="#${s.go}">Öffnen</a>` : ''}</li>`).join('')}</ol></details>
-    <div class="row" style="margin-bottom:12px"><a class="btn small" href="#gespraech">Gespräch üben</a><a class="btn small" href="#teilen">App weiterempfehlen</a></div>
     <p class="small muted">Stand ${esc(D.info.stand)}. Keine Rechtsberatung – verbindlich ist die Auskunft deiner Einbürgerungsbehörde.</p>`);
   $app.onclick = e => {
     const m = e.target.closest('[data-ms]');
@@ -932,11 +1024,12 @@ function audio() {
     if (!pool.length) pool = shuffle(D.q).slice(0, 30);
     i = 0;
   };
-  const voice = lang => speechSynthesis.getVoices().find(v => v.lang && v.lang.startsWith(lang));
-  const say = (text, lang = 'de-DE') => new Promise(res => {
-    const u = new SpeechSynthesisUtterance(text); u.lang = lang; u.rate = 0.92; const v = voice(lang.slice(0, 2)); if (v) u.voice = v;
+  const one = (text, lang) => new Promise(res => {
+    const u = new SpeechSynthesisUtterance(text); u.lang = lang; u.rate = lang === 'de-DE' ? 0.92 : 1; const v = voiceFor(lang.slice(0, 2)); if (v) u.voice = v;
     u.onend = res; u.onerror = res; speechSynthesis.speak(u);
   });
+  // in Sätzen vorlesen – Chrome bricht lange Ausgaben sonst ab
+  const say = async (text, lang = 'de-DE') => { const my = token; for (const part of chunks(text)) { if (my !== token) return; await one(part, lang); } };
   const wait = ms => new Promise(r => setTimeout(r, ms));
   async function playFrom() {
     const my = ++token; playing = true; draw();
@@ -1030,9 +1123,9 @@ function glossar() {
 /* ---------- Familienmodus ---------- */
 function profil() {
   render(`<h1>Familienmodus</h1><p class="muted">Mehrere Personen können auf einem Gerät lernen – jede mit eigenem Lernstand. Unterlagen-Checkliste, Behörde, Kosten und Mitbring-Listen sind gemeinsam.${ru('Несколько человек могут учиться на одном устройстве — у каждого свой прогресс. Документы, ведомство, расходы и списки общие.')}</p>
-    <div class="card"><ul class="list">${P.list.map(p => `<li><div class="row"><input class="text" data-pname="${p.id}" value="${esc(p.name)}" placeholder="Name (z. B. Olga)" aria-label="Name" style="flex:1;min-width:0">
-      ${p.id === P.active ? '<span class="badge ok">aktiv</span>' : `<button class="btn small primary" data-use="${p.id}">Wechseln</button>`}
-      ${P.list.length > 1 && p.id !== 'p1' ? `<button class="btn small ghost" data-del="${p.id}">Löschen</button>` : ''}</div></li>`).join('')}</ul>
+    <div class="card"><ul class="list">${P.list.map(p => `<li><div class="row"><input class="text" data-pname="${esc(p.id)}" value="${esc(p.name)}" placeholder="Name (z. B. Olga)" aria-label="Name" style="flex:1;min-width:0">
+      ${p.id === P.active ? '<span class="badge ok">aktiv</span>' : `<button class="btn small primary" data-use="${esc(p.id)}">Wechseln</button>`}
+      ${P.list.length > 1 && p.id !== 'p1' ? `<button class="btn small ghost" data-del="${esc(p.id)}">Löschen</button>` : ''}</div></li>`).join('')}</ul>
       <button class="btn small" data-act="add" style="margin-top:8px">+ Person hinzufügen</button></div>
     <p class="small muted">Tipp: Jede Person kann eigene Prüfungstermine, Fristen und einen eigenen Lebenslauf haben.</p>`);
   $app.onchange = e => { const n = e.target.dataset.pname; if (n) { P.list.find(p => p.id === n).name = e.target.value.trim(); writeJSON('eb.profiles', P); toast('Gespeichert'); } };
@@ -1050,6 +1143,7 @@ function profil() {
 }
 
 /* ---------- Einstellungen ---------- */
+let pendingImport = null;
 async function snapshotList() {
   const ks = (await idbKeys() || []).filter(k => String(k).startsWith('snap:')).sort().reverse();
   const box = document.getElementById('snaps'); if (!box) return;
@@ -1071,7 +1165,7 @@ function einstellungen() {
       <p class="small">Alles wird automatisch gespeichert – sofort nach jeder Eingabe, doppelt auf diesem Gerät.${ru('Всё сохраняется автоматически сразу после каждого действия, дважды на этом устройстве.')}</p>
       <p class="small" id="persist">…</p>
       <p class="small">${S.lastExport ? `Letzte Sicherungsdatei: ${fmtDate(S.lastExport)}` : 'Noch keine Sicherungsdatei heruntergeladen.'}</p>
-      <div class="row">${EMBED ? '' : '<button class="btn small primary" data-act="export">Sicherungsdatei herunterladen</button>'}<label class="btn small">Sicherungsdatei laden<input type="file" accept="application/json,.json" id="imp" hidden></label></div>
+      <div class="row">${EMBED ? '' : '<button class="btn small primary" data-act="export">Sicherungsdatei herunterladen</button>'}<label class="btn small">Sicherungsdatei laden<input type="file" accept="application/json,.json" id="imp" hidden></label></div><div id="impbox" style="margin-top:10px"></div>
       <h3 style="margin-top:18px">Automatische Sicherungspunkte</h3><p class="small muted">Einmal täglich, die letzten 7 Tage.</p><div id="snaps"></div>
       <div class="row" style="margin-top:12px"><button class="btn small ghost" data-act="reset">Lernstand dieses Profils zurücksetzen</button></div></div>
     <div class="card"><h2>Familienmodus</h2><p class="small">${P.list.length} Profil${P.list.length > 1 ? 'e' : ''} auf diesem Gerät.</p><a class="btn small" href="#profil">Profile verwalten</a></div>
@@ -1085,7 +1179,18 @@ function einstellungen() {
       <p class="small muted">Version ${VERSION}</p></div>`);
   storageStatus(); snapshotList();
   $app.onchange = e => {
-    if (e.target.id === 'imp') { const f = e.target.files[0]; if (!f) return; f.text().then(t => { restoreBackup(JSON.parse(t)); applyPrefs(); toast('Sicherung geladen'); einstellungen(); }).catch(() => toast('Datei ungültig – bitte eine Sicherungsdatei dieser App wählen.')); }
+    if (e.target.id === 'imp') {
+      const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+      f.text().then(t => {
+        const b = checkBackup(JSON.parse(t)); if (!b) throw new Error('ungültig');
+        pendingImport = JSON.parse(t);
+        const when = b.v === 2 && JSON.parse(t).created ? fmtDate(Date.parse(JSON.parse(t).created)) : '';
+        const who = b.v === 2 ? `${b.profiles.list.length} Profil${b.profiles.list.length > 1 ? 'e' : ''}` : '1 Profil';
+        document.getElementById('impbox').innerHTML = `<div class="notice" role="alert"><b>Aktuellen Stand ersetzen?</b><div class="small" style="margin-top:4px">Sicherung${when ? ' vom ' + when : ''} · ${who}. Dein jetziger Stand wird vorher als Sicherungspunkt abgelegt.</div>${ru('Заменить текущий прогресс? Текущее состояние будет сохранено как точка восстановления.')}
+          <div class="row" style="margin-top:10px"><button class="btn small primary" data-act="imp-ok">Ersetzen</button><button class="btn small ghost" data-act="imp-no">Abbrechen</button></div></div>`;
+        document.getElementById('impbox').scrollIntoView({ block: 'nearest' });
+      }).catch(() => toast('Datei ungültig – bitte eine Sicherungsdatei dieser App wählen.'));
+    }
   };
   $app.onclick = async e => {
     const t = e.target.closest('[data-size],[data-theme],[data-act],[data-snap],[data-lang]'); if (!t) return;
@@ -1093,14 +1198,21 @@ function einstellungen() {
     else if (t.dataset.size) { S.size = t.dataset.size; save(); applyPrefs(); einstellungen(); }
     else if (t.dataset.theme) { S.theme = t.dataset.theme; save(); applyPrefs(); einstellungen(); }
     else if (t.dataset.act === 'export') { exportBackup(); einstellungen(); }
+    else if (t.dataset.act === 'imp-no') { pendingImport = null; document.getElementById('impbox').innerHTML = ''; }
+    else if (t.dataset.act === 'imp-ok' && pendingImport) {
+      await idbPut('snap:vor-wiederherstellung', fullBackup());
+      try { restoreBackup(pendingImport); } catch { return toast('Datei ungültig – bitte eine Sicherungsdatei dieser App wählen.'); }
+      pendingImport = null; if (hl() && hl() !== 'ru') await loadDict(hl()); applyPrefs(); readerBar(); toast('Sicherung geladen'); einstellungen();
+    }
     else if (t.dataset.snap) {
       if (!t.dataset.sure) { t.dataset.sure = '1'; t.textContent = 'Sicher? Nochmal tippen'; return; }
       await idbPut('snap:vor-wiederherstellung', fullBackup());
       const b = await idbGet(t.dataset.snap); if (!b) return toast('Sicherungspunkt nicht lesbar');
-      restoreBackup(b); applyPrefs(); toast('Wiederhergestellt'); einstellungen();
+      try { restoreBackup(b); } catch { return toast('Sicherungspunkt nicht lesbar'); }
+      if (hl() && hl() !== 'ru') await loadDict(hl()); applyPrefs(); readerBar(); toast('Wiederhergestellt'); einstellungen();
     }
     else if (t.dataset.act === 'reset' && !t.dataset.sure) { t.dataset.sure = '1'; t.textContent = 'Wirklich zurücksetzen? Nochmal tippen'; }
-    else if (t.dataset.act === 'reset') { await idbPut('snap:vor-zuruecksetzen', fullBackup()); const keep = {}; SHARED.forEach(k => keep[k] = S[k]); S = Object.assign({}, defaults, keep); save(); applyPrefs(); toast('Zurückgesetzt'); einstellungen(); }
+    else if (t.dataset.act === 'reset') { await idbPut('snap:vor-zuruecksetzen', fullBackup()); const keep = {}; SHARED.forEach(k => keep[k] = S[k]); S = Object.assign(fresh(), keep); save(); applyPrefs(); toast('Zurückgesetzt'); einstellungen(); }
   };
   cleanup = () => { $app.onclick = null; $app.onchange = null; };
 }
@@ -1140,7 +1252,7 @@ function waehlen() {
 
 /* ---------- Weiterempfehlen ---------- */
 const APP_URL = 'https://einbuergerung.micana.de/';
-const SHARE_TEXT = 'Kostenlose App zur Vorbereitung auf die Einbürgerung in Sachsen: alle 310 Testfragen, Deutschkurs A1–B1, Unterlagen-Checkliste – auch auf Russisch und Englisch.';
+const SHARE_TEXT = 'Kostenlose App zur Vorbereitung auf die Einbürgerung in Sachsen: alle 310 Testfragen, Deutschkurs A1–B1, Unterlagen-Checkliste – mit Erklärungen auf Russisch, Englisch, Türkisch, Arabisch, Polnisch oder Rumänisch.';
 async function shareApp() {
   if (navigator.share) { try { await navigator.share({ title: 'Einbürgerung Sachsen', text: SHARE_TEXT, url: APP_URL }); return; } catch (e) { if (e.name === 'AbortError') return; } }
   try { await navigator.clipboard.writeText(`${SHARE_TEXT} ${APP_URL}`); toast('Link kopiert – jetzt einfügen und verschicken'); } catch { toast(APP_URL); }
@@ -1205,7 +1317,7 @@ async function erfolgsbild(score) {
 }
 
 /* ---------- Kalenderdatei (.ics) ---------- */
-const icsDate = d => d.toISOString().slice(0, 10).replace(/-/g, '');
+const icsDate = d => dayKey(d.getTime()).replace(/-/g, ''); // lokales Datum, nicht UTC
 const icsStamp = () => new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
 function icsFile(events) {
   const esc2 = s => String(s).replace(/[,;\\]/g, m => '\\' + m).replace(/\n/g, '\\n');
@@ -1228,7 +1340,7 @@ function download(name, text, type) {
   a.download = name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
-const daysUntil = s => Math.ceil((new Date(s + 'T00:00') - today()) / DAY);
+const daysUntil = s => Math.round((new Date(s + 'T00:00') - today()) / DAY); // round: Zeitumstellung
 const MONATE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 
 /* ---------- Lernplan ---------- */
@@ -1239,16 +1351,6 @@ function planData() {
   if (S.testdate) { r.tDays = daysUntil(S.testdate); r.qPerDay = r.tDays > 0 ? Math.ceil(openQ / Math.max(1, r.tDays - 3)) : openQ; }
   if (S.b1date) { r.bDays = daysUntil(S.b1date); r.lPerWeek = r.bDays > 0 ? Math.ceil(openL.length / Math.max(1, (r.bDays - 14) / 7)) : openL.length; }
   return r;
-}
-function todayCard() {
-  const p = planData();
-  if (!S.testdate && !S.b1date) return `<a class="card flat" style="display:block;margin-top:14px;text-decoration:none;color:inherit" href="#plan"><b>Hast du schon einen Prüfungstermin?</b> Dann erstelle deinen Lernplan ›${ru('Есть дата экзамена? Составьте план обучения')}</a>`;
-  const parts = [];
-  if (S.testdate && p.tDays >= 0) parts.push(p.tDays <= 7 && p.tDays >= 0 ? `Einbürgerungstest in <b>${p.tDays} Tagen</b>: heute eine Prüfungssimulation` : `<b>${Math.min(p.qPerDay, 40)} Testfragen</b> lernen (noch ${p.openQ} offen, Test in ${p.tDays} Tagen)`);
-  if (S.b1date && p.bDays >= 0 && p.nextL) parts.push(`Deutsch: diese Woche <b>${p.lPerWeek} Lektion${p.lPerWeek > 1 ? 'en' : ''}</b>, als Nächstes „${esc(p.nextL.t)}“ (Prüfung in ${p.bDays} Tagen)`);
-  if (!parts.length) return '';
-  return `<div class="card" style="margin-top:14px"><div class="row"><h3 style="margin:0">Heute</h3>${ru('Сегодня')}<span class="spacer"></span><a class="small" href="#plan">Plan ändern</a></div><ul class="list">${parts.map(x => `<li>${x}</li>`).join('')}</ul>
-    <div class="row">${S.testdate ? `<a class="btn small primary" href="${p.tDays <= 7 ? '#pruefung' : '#lernen'}">${p.tDays <= 7 ? 'Simulation starten' : 'Fragen lernen'}</a>` : ''}${S.b1date && p.nextL ? `<a class="btn small" href="#lektion--${p.nextL.id}">Lektion öffnen</a>` : ''}</div></div>`;
 }
 function plan() {
   const p = planData();
@@ -1385,7 +1487,7 @@ function lebenslauf() {
 
 /* ---------- Kostenrechner ---------- */
 function kosten() {
-  const K = S.kosten || (S.kosten = { erw: 1, kind: 0, kindAllein: 0, testPers: 1, testPreis: 25, b1Pers: 1, b1Preis: 150, uebers: 3, uebersPreis: 50, apost: 0, apostPreis: 0, sonst: 0 });
+  const K = S.kosten = Object.assign({ erw: 1, kind: 0, kindAllein: 0, testPers: 1, testPreis: 25, b1Pers: 1, b1Preis: 150, uebers: 3, uebersPreis: 50, apost: 0, apostPreis: 0, sonst: 0 }, S.kosten || {});
   const rows = () => [
     ['Einbürgerung Erwachsene', K.erw, 255, 'gesetzlich (§ 38 StAG)'],
     ['Kinder, mit den Eltern eingebürgert, ohne Einkommen', K.kind, 51, 'gesetzlich'],
@@ -1396,7 +1498,7 @@ function kosten() {
     ['Apostille / Legalisation', K.apost, K.apostPreis, 'je nach Land'],
     ['Sonstiges (Fotos, Porto, Fahrten …)', 1, K.sonst, '']];
   const sum = () => rows().reduce((s, r) => s + r[1] * r[2], 0);
-  const num = (k, label, step = 1) => `<div><label class="lbl small" for="k-${k}">${label}</label><input class="text" type="number" inputmode="decimal" min="0" step="${step}" id="k-${k}" data-k="${k}" value="${K[k]}"></div>`;
+  const num = (k, label, step = 1) => `<div><label class="lbl small" for="k-${k}">${label}</label><input class="text" type="number" inputmode="decimal" min="0" step="${step}" id="k-${k}" data-k="${k}" value="${esc(K[k])}"></div>`;
   render(`<h1>Kostenrechner</h1><p class="muted">Was kostet die Einbürgerung für deine Familie? Die Gebühren der Behörde sind gesetzlich festgelegt, alles andere sind Schätzwerte – trage deine echten Preise ein.${ru('Сколько стоит натурализация для вашей семьи? Сборы ведомства установлены законом, остальное — оценки: впишите реальные цены.')}</p>
     <div class="card"><h2>Personen</h2><div class="grid three">${num('erw', 'Erwachsene (ab 16)')}${num('kind', 'Kinder mit Eltern')}${num('kindAllein', 'Kinder allein')}</div></div>
     <div class="card"><h2>Prüfungen</h2><div class="grid two">${num('testPers', 'Personen Einbürgerungstest')}${num('testPreis', 'Preis Test (€)')}${num('b1Pers', 'Personen B1-Prüfung')}${num('b1Preis', 'Preis B1-Prüfung (€)', 5)}</div>
@@ -1497,7 +1599,7 @@ function installSteps(os, browser) {
   return I[browser === 'inapp' ? 'inapp' : `${os}-${browser}`] || I[`${os}-other`] || I['desktop-other'];
 }
 const withIcon = h => h.replace(/\{S\}/g, SHARE_ICON);
-const ruStep = r => { const x = tr(r); return x && hl() ? `<span class="ru" lang="${hl()}">${withIcon(esc(x))} ${say(x.replace(/\s*\{S\}/g, ''), 'hl')}</span>` : ''; };
+const ruStep = r => { const x = tr(r); return x && hl() ? `<span class="ru" lang="${hl()}"${dirAttr(hl())}>${withIcon(esc(x))} ${say(x.replace(/\s*\{S\}/g, ''), 'hl')}</span>` : ''; };
 const stepList = steps => `<ol class="steps">${steps.map(([d, r]) => `<li>${withIcon(esc(d))}${ruStep(r)}</li>`).join('')}</ol>`;
 const OS_NAME = { ios: 'iPhone / iPad', android: 'Android', desktop: 'Computer' };
 const BR_NAME = { safari: 'Safari', chrome: 'Chrome', firefox: 'Firefox', edge: 'Edge', samsung: 'Samsung Internet', opera: 'Opera', inapp: 'In-App-Browser', other: 'Browser' };
@@ -1540,7 +1642,7 @@ function installGate(force) {
     const H = hl() || 'de';
     el.innerHTML = `<div class="gate-in">
       <div class="gate-top"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="2" width="28" height="28" rx="8" fill="currentColor"/><path d="M10 16.5l4 4 8-9" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><b>Einbürgerung <small>Sachsen</small></b><span class="spacer"></span>
-        <div class="seg" role="group" aria-label="Sprache · Язык · Language">${['ru', 'en', 'de'].map(l => `<button data-glang="${l}" class="${H === l ? 'on' : ''}" lang="${l}">${l === 'de' ? 'Deutsch' : LANG[l].name}</button>`).join('')}</div></div>
+        <label class="gate-lang"><span class="sr">Sprache · Language</span><select data-glang aria-label="Sprache · Language">${[...HL, 'de'].map(l => `<option value="${l}" ${H === l ? 'selected' : ''} lang="${l}">${l === 'de' ? 'Deutsch' : LANG[l].name}</option>`).join('')}</select></label></div>
       ${appInstalled ? `<h1 id="gate-h">Die App ist installiert</h1>${ru('Приложение установлено')}
         <div class="notice ok" style="margin-top:14px">Öffne sie jetzt über das Symbol „Einbürgerung“ auf deinem Startbildschirm. Dieses Browserfenster kannst du schließen.${ru('Откройте его через значок «Einbürgerung» на главном экране. Это окно браузера можно закрыть.')}</div>`
       : `<h1 id="gate-h">Zuerst die App installieren</h1>${ru('Сначала установите приложение')}
@@ -1561,14 +1663,14 @@ function installGate(force) {
   el.onclick = async e => {
     const t = e.target;
     if (t.closest('[data-act="native-install"]')) return nativeInstall();
-    const g = t.closest('[data-glang]');
-    if (g) { if (await setLang(g.dataset.glang)) { draw(); if (!S.onboarded) route(); } return; }
+    if (t.closest('[data-glang]')) return;
     if (t.closest('[data-act="copy-url"]')) { try { await navigator.clipboard.writeText(APP_URL); toast('Adresse kopiert – im Browser einfügen'); } catch { toast(APP_URL); } return; }
     if (t.closest('[data-act="gate-skip"]')) {
       try { localStorage.setItem(GATE_KEY, String(Date.now())); } catch {}
       el.remove(); document.body.classList.remove('gated'); nag(p); route();
     }
   };
+  el.onchange = async e => { const g = e.target.closest('[data-glang]'); if (g && await setLang(g.value)) { draw(); if (!S.onboarded) route(); } };
   if (!force && !appInstalled) detectInstalled().then(x => { if (x && document.getElementById('gate')) draw(); });
   el.querySelector('h1')?.focus?.();
 }
@@ -1577,7 +1679,7 @@ function nag(p) {
   if (document.getElementById('nag')) return;
   const el = document.createElement('button'); el.id = 'nag'; el.className = 'nag no-print';
   const h = hl() ? tr('Приложение не установлено') : '';
-  el.innerHTML = `<span><b>App nicht installiert</b>${h ? `<span class="ru" lang="${hl()}">${esc(h)}</span>` : ''}</span><span class="go">Installieren ›</span>`;
+  el.innerHTML = `<span><b>App nicht installiert</b>${h ? `<span class="ru" lang="${hl()}"${dirAttr(hl())}>${esc(h)}</span>` : ''}</span><span class="go">Installieren ›</span>`;
   el.onclick = () => installGate(true);
   document.body.appendChild(el); document.body.classList.add('nagged');
   document.documentElement.style.setProperty('--nag-h', el.offsetHeight + 'px');
@@ -1602,24 +1704,27 @@ function desktopSheet(p) {
 }
 
 /* ---------- Sprache wählen ---------- */
-const LANG_OPTS = [
-  ['ru', 'Deutsch + Русский', 'Erklärungen zusätzlich auf Russisch', 'Пояснения дополнительно на русском'],
-  ['en', 'Deutsch + English', 'Erklärungen zusätzlich auf Englisch', 'Explanations also in English'],
-  ['de', 'Nur Deutsch', 'Alles nur auf Deutsch – gut für Fortgeschrittene', '']
-];
+// Begrüßung und Frage in allen Sprachen (für den Erststart, bevor eine Sprache gewählt ist)
+const WELCOME = { ru: ['Добро пожаловать!', 'Какой язык добавить к немецкому?'], en: ['Welcome!', 'Which language would you like alongside German?'], tr: ['Hoş geldiniz!', 'Almancanın yanında hangi dili istersiniz?'], ar: ['أهلاً وسهلاً!', 'ما اللغة التي تريدها إلى جانب الألمانية؟'], pl: ['Witamy!', 'Jaki język chcesz obok niemieckiego?'], ro: ['Bun venit!', 'Ce limbă vrei pe lângă germană?'] };
+const many = i => HL.map(l => `<span lang="${l}"${dirAttr(l)}>${WELCOME[l][i]}</span>`).join(' · ');
 function langChoice(first) {
   const cur = S.lang || (first ? '' : 'ru');
-  return `<div class="langs" role="radiogroup" aria-label="Sprache">${LANG_OPTS.map(([k, t, d, n]) => `<button class="lang ${cur === k ? 'on' : ''}" data-lang="${k}" role="radio" aria-checked="${cur === k}"><span class="flag" aria-hidden="true">${k === 'de' ? 'DE' : 'DE+' + LANG[k].tag}</span><span><b>${t}</b><span class="small">${d}</span>${n ? `<span class="small" lang="${k}" style="color:var(--ru)">${n}</span>` : ''}</span><span class="tick" aria-hidden="true">${cur === k ? '✓' : ''}</span></button>`).join('')}</div>`;
+  const opts = [...HL.map(k => [k, `Deutsch + ${LANG[k].name}`, `Erklärungen zusätzlich auf ${LANG[k].de}`, LANG[k].also]), ['de', 'Nur Deutsch', 'Alles nur auf Deutsch – gut für Fortgeschrittene', '']];
+  return `<div class="langs" role="radiogroup" aria-label="Sprache">${opts.map(([k, t, d, n]) => `<button class="lang ${cur === k ? 'on' : ''}" data-lang="${k}" role="radio" aria-checked="${cur === k}"><span class="flag" aria-hidden="true">${k === 'de' ? 'DE' : 'DE+' + LANG[k].tag}</span><span><b>${esc(t)}</b><span class="small">${d}</span>${n ? `<span class="small" lang="${k}"${dirAttr(k)} style="color:var(--ru)">${n}</span>` : ''}${LANG[k]?.ai ? `<span class="small muted ai">KI-Übersetzung · <span lang="${k}"${dirAttr(k)}>${LANG[k].ai}</span></span>` : ''}</span><span class="tick" aria-hidden="true">${cur === k ? '✓' : ''}</span></button>`).join('')}</div>`;
 }
 function langToast() { return hl() ? `Sprache: Deutsch + ${hlName()}` : 'Sprache: Nur Deutsch'; }
 // Vorauswahl beim Erststart nach Gerätesprache
-function guessLang() { const l = (navigator.languages || [navigator.language || '']).map(x => String(x).slice(0, 2).toLowerCase()); for (const x of l) { if (x === 'ru' || x === 'uk' || x === 'be' || x === 'kk') return 'ru'; if (x === 'en') return 'en'; if (x === 'de') return ''; } return ''; }
+function guessLang() {
+  const map = { ru: 'ru', uk: 'ru', be: 'ru', kk: 'ru', en: 'en', tr: 'tr', ar: 'ar', pl: 'pl', ro: 'ro', mo: 'ro', de: '' };
+  for (const x of (navigator.languages || [navigator.language || '']).map(x => String(x).slice(0, 2).toLowerCase())) if (x in map) return map[x];
+  return '';
+}
 function sprache(mode) {
   const first = mode === 'erst' && !S.onboarded;
-  if (first && !S.lang) { const g = guessLang(); if (g) { S.lang = g; if (g === 'en') loadEN().then(() => { if (location.hash.startsWith('#sprache')) sprache(mode); }); } }
+  if (first && !S.lang) { const g = guessLang(); if (g) { S.lang = g; if (g !== 'ru') loadDict(g).then(ok => { if (!ok) S.lang = ''; if (location.hash.startsWith('#sprache')) sprache(mode); }); } }
   render(`${first ? '' : back('#einstellungen', 'Einstellungen')}
-    ${first ? `<div class="welcome"><div class="eyebrow">Einbürgerung Sachsen</div><h1>Willkommen!</h1><p class="muted" style="margin:0"><span lang="ru">Добро пожаловать!</span> · <span lang="en">Welcome!</span></p></div>` : '<h1>Sprache</h1>'}
-    <p style="margin-top:14px"><b>Welche Sprache möchtest du zusätzlich zu Deutsch?</b><span class="small" style="display:block;color:var(--ru)"><span lang="ru">Какой язык добавить к немецкому?</span> · <span lang="en">Which language would you like alongside German?</span></span></p>
+    ${first ? `<div class="welcome"><div class="eyebrow">Einbürgerung Sachsen</div><h1>Willkommen!</h1><p class="muted" style="margin:0">${many(0)}</p></div>` : '<h1>Sprache</h1>'}
+    <p style="margin-top:14px"><b>Welche Sprache möchtest du zusätzlich zu Deutsch?</b><span class="small" style="display:block;color:var(--ru)">${many(1)}</span></p>
     ${langChoice(first)}
     <p class="small muted">Deutsch steht immer an erster Stelle. Du kannst die Sprache jederzeit unter <b>Einstellungen</b> ändern.${ru('Немецкий всегда на первом месте. Язык можно изменить в любое время в настройках.')}</p>
     ${first ? `<div class="row end"><button class="btn primary" data-act="weiter" ${S.lang ? '' : 'disabled'}>Weiter ›</button></div>` : '<div class="row"><a class="btn" href="#tutorial">Einführung ansehen</a></div>'}`);

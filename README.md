@@ -1,6 +1,6 @@
 # Einbürgerung Sachsen – Lern-App
 
-Kostenlose, offline-fähige Web-App (PWA) für Smartphone und Tablet, die auf die Einbürgerung in Sachsen vorbereitet. Deutsch steht immer an erster Stelle; alle Erklärungen gibt es zusätzlich auf Russisch oder Englisch – oder man lernt „Nur Deutsch“.
+Kostenlose, offline-fähige Web-App (PWA) für Smartphone und Tablet, die auf die Einbürgerung in Sachsen vorbereitet. Deutsch steht immer an erster Stelle; alle Erklärungen gibt es zusätzlich auf Russisch, Englisch, Türkisch, Arabisch, Polnisch oder Rumänisch – oder man lernt „Nur Deutsch“.
 
 **Live:** https://einbuergerung.micana.de
 
@@ -13,7 +13,7 @@ Kostenlose, offline-fähige Web-App (PWA) für Smartphone und Tablet, die auf di
 - **Kostenrechner** für die ganze Familie
 - **Ablaufdaten:** Warnung, bevor Pass oder Aufenthaltstitel ablaufen, mit Kalendererinnerung
 - **Installation zuerst:** Auf Handy und Tablet erscheint im Browser eine Vollbild-Anleitung „Zuerst die App installieren“ (passend zu Gerät und Browser, mit Hinweis für WhatsApp-/Telegram-Browser). Weiter im Browser geht nur für 6 Stunden, danach kommt der Hinweis wieder; solange zeigt ein Balken oben „App nicht installiert“. Auf Android wird eine bereits installierte App erkannt („jetzt öffnen“).
-- **Erststart:** Sprachauswahl (Deutsch + Русский / Deutsch + English / Nur Deutsch), danach eine Einführung in 8 Schritten – zweisprachig in der gewählten Hilfssprache, mit Vorlese-Knöpfen
+- **Erststart:** Sprachauswahl (Deutsch + Русский / English / Türkçe / العربية / Polski / Română oder Nur Deutsch; Arabisch von rechts nach links), danach eine Einführung in 8 Schritten – zweisprachig in der gewählten Hilfssprache, mit Vorlese-Knöpfen
 - **Sprache und Einführung jederzeit:** unter Einstellungen, „Mehr“ und über 🌐 auf der Startseite
 - **Tagesziel und Lerntage am Stück**, Fortschritt als Stempel (A1 bis Urkunde)
 - **Themen-Statistik:** wo die meisten Fehler passieren, mit gezieltem Training
@@ -27,7 +27,8 @@ Kostenlose, offline-fähige Web-App (PWA) für Smartphone und Tablet, die auf di
 - **Mein erstes Mal wählen:** Wahlen in Sachsen erklärt, mit Quiz
 - **Weiterempfehlen** per Teilen-Menü, WhatsApp, Telegram oder QR-Code; Erfolgsbild nach bestandener Simulation
 - **Update-Hinweis:** „Neue Version verfügbar – jetzt laden“
-- **Sicheres Speichern:** automatisch in localStorage und IndexedDB, dauerhafter Speicher angefragt, tägliche Sicherungspunkte (7 Tage), Sicherungsdatei
+- **Bedienung:** Tastatur im Test (1–4 bzw. A–D, Enter, ← →), Prüfung abbrechen mit Rückfrage, „Nächster Schritt“ auf der Startseite, „Mehr“ nach Themen gegliedert, höhere Kontraste und größere Tippflächen
+- **Sicheres Speichern:** automatisch in localStorage und IndexedDB, dauerhafter Speicher angefragt, tägliche Sicherungspunkte (7 Tage), Sicherungsdatei (wird beim Laden geprüft, mit Rückfrage und Sicherungspunkt davor)
 - **Voraussetzungs-Check** mit Fristenrechner (5 Jahre bzw. 3 Jahre bei deutschem Ehepartner)
 - **Unterlagen-Checkliste** nach Lebenssituation, druckbar
 - **Behörden & Kontakte:** Suche nach Ort/PLZ, alle 13 sächsischen Einbürgerungsbehörden, Beratung, Tests, Kurse
@@ -47,13 +48,13 @@ Lokal starten: `python3 -m http.server` und `http://localhost:8000` öffnen.
 | `data/kurs-a1/a2/b1.json` | Deutschkurs |
 | `data/dtz.json` | B1-Prüfungsaufgaben (Hören, Lesen, Schreiben, Sprechen) |
 | `data/glossar.json` | Wörterbuch: Begriff, Wortformen (`f`), Erklärung DE/RU |
-| `data/en.json` | Englisch: ordnet jedem russischen Text (Daten und `app.js`) die englische Fassung zu |
+| `data/en.json`, `tr`, `ar`, `pl`, `ro` | Hilfssprachen: ordnen jedem russischen Text (Daten und `app.js`) die Übersetzung zu. Türkisch, Arabisch, Polnisch und Rumänisch sind KI-Übersetzungen und in der App so gekennzeichnet |
 
-**Hilfssprache:** Texte in der Hilfssprache stehen in den Daten und im Code auf Russisch (`ru(...)`). Für Englisch schlägt die App den russischen Text in `data/en.json` nach. Wer einen russischen Text ändert oder neu anlegt, ergänzt dort die englische Fassung; `python3 tools/i18n-check.py` zeigt, was fehlt.
+**Hilfssprache:** Texte in der Hilfssprache stehen in den Daten und im Code auf Russisch (`ru(...)`). Für jede andere Hilfssprache schlägt die App den russischen Text in `data/<code>.json` nach (wird erst geladen, wenn jemand die Sprache wählt). Wer einen russischen Text ändert oder neu anlegt, ergänzt die Fassung in allen fünf Dateien; `python3 tools/i18n-check.py` zeigt, was fehlt. Neue Sprache: Eintrag in `LANG` und `HL` (app.js), `WELCOME`, Datei `data/<code>.json`, Muster `DICT` in `sw.js`.
 
 **Weitere Bundesländer:** je Land eine Datei `data/behoerden-<kürzel>.json` im gleichen Schema anlegen und die 10 Landesfragen aus dem BAMF-Katalog ergänzen.
 
-**Nach jeder Änderung** in `sw.js` die Konstante `CACHE` hochzählen, damit installierte Apps aktualisieren.
+**Nach jeder Änderung** (Code oder Daten) in `sw.js` die Konstante `CACHE` hochzählen, damit installierte Apps aktualisieren. Code und Daten kommen immer aus demselben Cache, neue Daten also erst nach „Jetzt laden“.
 
 ## Quellen & Rechtliches
 - Fragen: BAMF – Gesamtfragenkatalog „Leben in Deutschland“/„Einbürgerungstest“ (Anlage 1 EinbTestV), amtliches Werk nach § 5 UrhG, unverändert. Lösungen aus dem BAMF-Online-Testcenter, abgeglichen mit zwei unabhängigen Datensätzen.
